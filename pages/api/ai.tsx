@@ -425,13 +425,13 @@ function parseAIResponse(response: string, fallbackOverview: string) {
   }
   
   // Extract REVIEW
-  const reviewMatch = cleanResponse.match(/REVIEW:\s*(.+?)(?=\s*(?:KEY POINTS:|•|-|\d\.|$))/is);
+  const reviewMatch = cleanResponse.match(/REVIEW:\s*(.+?)(?=\s*(?:KEY POINTS:|•|-|\d\.|$))/i);
   if (reviewMatch && reviewMatch[1]) {
     review = reviewMatch[1].trim();
   }
   
   // Extract KEY POINTS
-  const keyPointsSection = cleanResponse.match(/KEY POINTS:(.+?)(?=\s*(?:[A-Z]+:|$))/is);
+  const keyPointsSection = cleanResponse.match(/KEY POINTS:(.+?)(?=\s*(?:[A-Z]+:|$))/i);
   if (keyPointsSection && keyPointsSection[1]) {
     const pointsText = keyPointsSection[1];
     const bulletRegex = /[•\-*]\s*(.+?)(?=\n[•\-*]|\n\n|$)/g;
