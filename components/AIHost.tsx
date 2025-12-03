@@ -283,7 +283,7 @@ export default function AIHost({ movie, isLoading }: AIHostProps) {
             <img
               src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
               alt={movie.title}
-              style={styles.poster}
+              style={styles.poster as React.CSSProperties}
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
                 const parent = e.currentTarget.parentElement;
