@@ -1,12 +1,13 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
-import { Groq } from '@groq/sdk';
+import { Groq } from 'groq-sdk';
 
 // Initialize Groq client
 function getGroqClient() {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error('GROQ_API_KEY is not set in environment variables');
+    console.warn('GROQ_API_KEY not set, using mock responses');
+    return null;
   }
   return new Groq({ apiKey });
 }
@@ -78,118 +79,105 @@ const mockTeams = [
   },
 ];
 
-// Process query with AI
+// Process query with AI or fallback
 async function processQueryWithAI(query: string) {
   try {
     const groq = getGroqClient();
     
-    const prompt = `Analyze this football query and determine the intent. Query: "${query}"
+    if (!groq) {
+      // Fallback to simple keyword matching
+      return processQueryFallback(query);
+    }
     
-    Respond with JSON only in this exact format:
+    const prompt = `Analyze this football query: "${query}"
+    
+    Respond with JSON only:
     {
       "intent": "player_search" | "team_search" | "world_cup" | "general",
       "playerName": "string or null",
       "teamName": "string or null",
-      "keywords": ["array", "of", "keywords"],
-      "originalQuery": "original query"
-    }
-    
-    Examples:
-    Query: "Messi stats" → {"intent": "player_search", "playerName": "Lionel Messi", "teamName": null, "keywords": ["stats", "messi"], "originalQuery": "Messi stats"}
-    Query: "Argentina team" → {"intent": "team_search", "playerName": null, "teamName": "Argentina", "keywords": ["argentina", "team"], "originalQuery": "Argentina team"}
-    Query: "World Cup 2026" → {"intent": "world_cup", "playerName": null, "teamName": null, "keywords": ["world", "cup", "2026"], "originalQuery": "World Cup 2026"}
-    Query: "best forwards" → {"intent": "general", "playerName": null, "teamName": null, "keywords": ["best", "forwards"], "originalQuery": "best forwards"}`;
+      "keywords": ["array", "of", "keywords"]
+    }`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: 'mixtral-8x7b-32768',
       temperature: 0.3,
-      max_tokens: 500,
+      max_tokens: 200,
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
-    return JSON.parse(content);
+    const result = JSON.parse(content);
+    return { ...result, originalQuery: query };
   } catch (error) {
-    console.error('AI processing error:', error);
-    // Fallback to simple keyword matching
-    const queryLower = query.toLowerCase();
-    if (queryLower.includes('messi')) {
-      return {
-        intent: 'player_search',
-        playerName: 'Lionel Messi',
-        teamName: null,
-        keywords: ['messi'],
-        originalQuery: query,
-      };
-    } else if (queryLower.includes('ronaldo')) {
-      return {
-        intent: 'player_search',
-        playerName: 'Cristiano Ronaldo',
-        teamName: null,
-        keywords: ['ronaldo'],
-        originalQuery: query,
-      };
-    } else if (queryLower.includes('argentina')) {
-      return {
-        intent: 'team_search',
-        playerName: null,
-        teamName: 'Argentina',
-        keywords: ['argentina'],
-        originalQuery: query,
-      };
-    } else if (queryLower.includes('world cup')) {
-      return {
-        intent: 'world_cup',
-        playerName: null,
-        teamName: null,
-        keywords: ['world', 'cup'],
-        originalQuery: query,
-      };
-    } else {
-      return {
-        intent: 'general',
-        playerName: null,
-        teamName: null,
-        keywords: query.toLowerCase().split(' '),
-        originalQuery: query,
-      };
-    }
+    console.error('AI processing error, using fallback:', error);
+    return processQueryFallback(query);
   }
 }
 
-// Search YouTube for football videos
-async function searchYouTube(query: string) {
-  try {
-    const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) {
-      console.warn('YouTube API key not set, using fallback');
-      return 'https://www.youtube.com/embed/ZO0d8r_2qGI'; // Default football highlights
-    }
-
-    const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-      params: {
-        part: 'snippet',
-        q: `${query} football highlights`,
-        type: 'video',
-        maxResults: 1,
-        key: apiKey,
-      },
-    });
-
-    if (response.data.items.length > 0) {
-      const videoId = response.data.items[0].id.videoId;
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-  } catch (error) {
-    console.error('YouTube search error:', error);
-  }
+// Fallback keyword matching
+function processQueryFallback(query: string) {
+  const queryLower = query.toLowerCase();
   
-  // Fallback videos based on query
+  if (queryLower.includes('messi')) {
+    return {
+      intent: 'player_search',
+      playerName: 'Lionel Messi',
+      teamName: null,
+      keywords: ['messi'],
+      originalQuery: query,
+    };
+  } else if (queryLower.includes('ronaldo')) {
+    return {
+      intent: 'player_search',
+      playerName: 'Cristiano Ronaldo',
+      teamName: null,
+      keywords: ['ronaldo'],
+      originalQuery: query,
+    };
+  } else if (queryLower.includes('argentina')) {
+    return {
+      intent: 'team_search',
+      playerName: null,
+      teamName: 'Argentina',
+      keywords: ['argentina'],
+      originalQuery: query,
+    };
+  } else if (queryLower.includes('world cup')) {
+    return {
+      intent: 'world_cup',
+      playerName: null,
+      teamName: null,
+      keywords: ['world', 'cup'],
+      originalQuery: query,
+    };
+  } else if (queryLower.includes('brazil')) {
+    return {
+      intent: 'team_search',
+      playerName: null,
+      teamName: 'Brazil',
+      keywords: ['brazil'],
+      originalQuery: query,
+    };
+  } else {
+    return {
+      intent: 'general',
+      playerName: null,
+      teamName: null,
+      keywords: queryLower.split(' ').filter(k => k.length > 0),
+      originalQuery: query,
+    };
+  }
+}
+
+// Get YouTube video
+async function getYouTubeVideo(query: string) {
+  // Default videos based on query
   const queryLower = query.toLowerCase();
   if (queryLower.includes('messi')) return 'https://www.youtube.com/embed/ZO0d8r_2qGI';
   if (queryLower.includes('ronaldo')) return 'https://www.youtube.com/embed/OUKGsb8CpF8';
   if (queryLower.includes('argentina')) return 'https://www.youtube.com/embed/eJXWcJeGXlM';
-  return 'https://www.youtube.com/embed/dZqkf1ZnQh4'; // General football highlights
+  return 'https://www.youtube.com/embed/dZqkf1ZnQh4'; // General football
 }
 
 export default async function handler(
@@ -198,19 +186,14 @@ export default async function handler(
 ) {
   const { action, query } = req.query;
 
-  console.log(`🔍 Processing football query: ${query}`);
-
-  if (!query || typeof query !== 'string') {
-    return res.status(400).json({ error: 'Query parameter is required' });
-  }
-
-  try {
-    if (action === 'search') {
-      // Process query with AI
+  if (action === 'search' && query && typeof query === 'string') {
+    console.log(`🔍 Football search: ${query}`);
+    
+    try {
       const queryUnderstanding = await processQueryWithAI(query);
       console.log('🎯 Query intent:', queryUnderstanding);
 
-      // Search players
+      // Filter players
       const playerResults = mockPlayers.filter(player => {
         const searchStr = `${player.name} ${player.position} ${player.nationality} ${player.club}`.toLowerCase();
         return queryUnderstanding.keywords.some((keyword: string) =>
@@ -218,7 +201,7 @@ export default async function handler(
         );
       });
 
-      // Search teams
+      // Filter teams
       const teamResults = mockTeams.filter(team => {
         const searchStr = `${team.name} ${team.region}`.toLowerCase();
         return queryUnderstanding.keywords.some((keyword: string) =>
@@ -226,17 +209,15 @@ export default async function handler(
         );
       });
 
-      // Get YouTube video
-      const youtubeUrl = await searchYouTube(query);
+      // Get video
+      const youtubeUrl = await getYouTubeVideo(query);
 
-      // World Cup info if relevant
+      // World Cup info
       const worldCupInfo = queryUnderstanding.intent === 'world_cup' ? {
         year: 2026,
         host: 'USA, Canada, Mexico',
         teams: 48,
         groups: 16,
-        startDate: 'June 2026',
-        currentQualifiers: 0,
       } : null;
 
       const response = {
@@ -250,19 +231,28 @@ export default async function handler(
 
       console.log(`✅ Found ${playerResults.length} players, ${teamResults.length} teams`);
       return res.status(200).json(response);
+    } catch (error) {
+      console.error('❌ Search error:', error);
+      return res.status(200).json({
+        players: [],
+        teams: [],
+        youtubeUrl: 'https://www.youtube.com/embed/dZqkf1ZnQh4',
+        error: 'Search failed, showing default results',
+      });
     }
-
-    // Default response
-    res.status(200).json({
-      message: 'FutbolAI API is running!',
-      endpoints: ['GET /api/ai?action=search&query=your-query'],
-      example: 'Try: /api/ai?action=search&query=Messi',
-    });
-  } catch (error) {
-    console.error('❌ API error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
-    });
   }
+
+  // Default response
+  res.status(200).json({
+    message: 'FutbolAI API is running! 🏆',
+    version: '1.0',
+    endpoints: {
+      search: 'GET /api/ai?action=search&query=your-query',
+      examples: [
+        '/api/ai?action=search&query=Messi',
+        '/api/ai?action=search&query=Argentina',
+        '/api/ai?action=search&query=World Cup 2026',
+      ]
+    }
+  });
 }
