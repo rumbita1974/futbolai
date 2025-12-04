@@ -161,6 +161,76 @@ export default function Home() {
       borderRadius: '50%',
       animation: 'spin 1s linear infinite',
     },
+    // ADDED: Footer Styles (Simplified)
+    footer: {
+      marginTop: '4rem',
+      paddingTop: '2rem',
+      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+    },
+    footerContainer: {
+      maxWidth: '1400px',
+      margin: '0 auto',
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      gap: '1.5rem',
+    },
+    footerContent: {
+      display: 'flex',
+      flexDirection: 'column' as const,
+      alignItems: 'center',
+      gap: '1rem',
+      width: '100%',
+    },
+    attribution: {
+      textAlign: 'center' as const,
+      padding: '0 1rem',
+    },
+    developer: {
+      fontSize: '1rem',
+      color: '#cbd5e1',
+      marginBottom: '0.5rem',
+    },
+    developerName: {
+      fontWeight: 600,
+      color: '#ffffff',
+      background: 'linear-gradient(to right, #8b5cf6, #3b82f6)',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    },
+    copyright: {
+      fontSize: '0.875rem',
+      color: '#94a3b8',
+    },
+    disclaimerContainer: {
+      maxWidth: '600px', // Slightly narrower for cleaner look
+      textAlign: 'center' as const,
+      padding: '1rem',
+      background: 'rgba(15, 23, 42, 0.3)',
+      borderRadius: '0.75rem',
+      border: '1px solid rgba(255, 255, 255, 0.05)',
+    },
+    disclaimerTitle: {
+      fontSize: '0.875rem',
+      fontWeight: 600,
+      color: '#cbd5e1',
+      marginBottom: '0.5rem',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.5rem',
+    },
+    disclaimerText: {
+      fontSize: '0.75rem',
+      color: '#94a3b8',
+      lineHeight: 1.5,
+    },
+    separator: {
+      height: '1px',
+      width: '60px',
+      background: 'linear-gradient(to right, transparent, #8b5cf6, transparent)',
+      margin: '0.5rem 0',
+    },
   };
 
   return (
@@ -251,6 +321,36 @@ export default function Home() {
                 </p>
               </div>
             )}
+          </div>
+          
+          {/* ADDED: Footer Section (Simplified) */}
+          <div style={styles.footer}>
+            <div style={styles.footerContainer}>
+              <div style={styles.footerContent}>
+                {/* Attribution */}
+                <div style={styles.attribution}>
+                  <p style={styles.developer}>
+                    Developed by <span style={styles.developerName}>A. Guillen</span>
+                  </p>
+                  <div style={styles.separator}></div>
+                  <p style={styles.copyright}>
+                    © {new Date().getFullYear()} Movie AI Explorer
+                  </p>
+                </div>
+                
+                {/* Simplified Disclaimer */}
+                <div style={styles.disclaimerContainer}>
+                  <div style={styles.disclaimerTitle}>
+                    <span>📽️</span>
+                    <span>Content Copyright Notice</span>
+                  </div>
+                  <p style={styles.disclaimerText}>
+                    Movie posters and trailer videos are property of their respective owners.
+                    All trademarks and registered trademarks are the property of their respective owners.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
