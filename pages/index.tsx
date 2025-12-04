@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import MovieSearch from '../components/MovieSearch';
-import AIHost from '../components/AIHost';
+import FootballSearch from '../components/FootballSearch';
+import FootballAI from '../components/FootballAI';
 
 export default function Home() {
-  const [selectedMovie, setSelectedMovie] = useState<any>(null);
-  const [trailerUrl, setTrailerUrl] = useState<string>('');
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [videoUrl, setVideoUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)',
+      background: 'linear-gradient(135deg, #0a2e1a 0%, #1a5c36 100%)',
       color: 'white',
       padding: '2rem',
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -26,7 +27,7 @@ export default function Home() {
       fontSize: '3.5rem',
       fontWeight: 800,
       marginBottom: '1rem',
-      background: 'linear-gradient(to right, #8b5cf6, #ec4899, #f59e0b)',
+      background: 'linear-gradient(to right, #4ade80, #ec4899, #f59e0b)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
       lineHeight: 1.2,
@@ -67,7 +68,7 @@ export default function Home() {
       border: '1px solid rgba(255, 255, 255, 0.1)',
       minHeight: '500px',
     },
-    trailerSection: {
+    videoSection: {
       background: 'rgba(30, 41, 59, 0.7)',
       backdropFilter: 'blur(10px)',
       borderRadius: '1.5rem',
@@ -76,24 +77,24 @@ export default function Home() {
       border: '1px solid rgba(255, 255, 255, 0.1)',
       marginTop: '2rem',
     },
-    trailerHeader: {
+    videoHeader: {
       fontSize: '2rem',
       fontWeight: 700,
       marginBottom: '1.5rem',
       display: 'flex',
       alignItems: 'center',
       gap: '1rem',
-      background: 'linear-gradient(to right, #8b5cf6, #3b82f6)',
+      background: 'linear-gradient(to right, #4ade80, #3b82f6)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
     },
     videoContainer: {
       position: 'relative' as const,
       width: '100%',
-      paddingBottom: '56.25%', // 16:9 aspect ratio
+      paddingBottom: '56.25%',
       borderRadius: '1rem',
       overflow: 'hidden',
-      background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%)',
+      background: 'linear-gradient(135deg, #1a5c36 0%, #0a2e1a 100%)',
       marginBottom: '1.5rem',
       boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
     },
@@ -105,7 +106,7 @@ export default function Home() {
       height: '100%',
       border: 'none',
     },
-    noTrailer: {
+    noVideo: {
       padding: '4rem 2rem',
       textAlign: 'center' as const,
       background: 'rgba(15, 23, 42, 0.5)',
@@ -156,12 +157,11 @@ export default function Home() {
     loadingSpinner: {
       width: '50px',
       height: '50px',
-      border: '4px solid rgba(139, 92, 246, 0.3)',
-      borderTopColor: '#8b5cf6',
+      border: '4px solid rgba(74, 222, 128, 0.3)',
+      borderTopColor: '#4ade80',
       borderRadius: '50%',
       animation: 'spin 1s linear infinite',
     },
-    // ADDED: Footer Styles (Simplified)
     footer: {
       marginTop: '4rem',
       paddingTop: '2rem',
@@ -194,7 +194,7 @@ export default function Home() {
     developerName: {
       fontWeight: 600,
       color: '#ffffff',
-      background: 'linear-gradient(to right, #8b5cf6, #3b82f6)',
+      background: 'linear-gradient(to right, #4ade80, #22d3ee)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent',
     },
@@ -203,7 +203,7 @@ export default function Home() {
       color: '#94a3b8',
     },
     disclaimerContainer: {
-      maxWidth: '600px', // Slightly narrower for cleaner look
+      maxWidth: '600px',
       textAlign: 'center' as const,
       padding: '1rem',
       background: 'rgba(15, 23, 42, 0.3)',
@@ -228,14 +228,13 @@ export default function Home() {
     separator: {
       height: '1px',
       width: '60px',
-      background: 'linear-gradient(to right, transparent, #8b5cf6, transparent)',
+      background: 'linear-gradient(to right, transparent, #4ade80, transparent)',
       margin: '0.5rem 0',
     },
   };
 
   return (
     <div style={styles.container}>
-      {/* Add CSS animation for spinner */}
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -244,36 +243,36 @@ export default function Home() {
       
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <header style={styles.header}>
-          <h1 style={styles.title}>Movie AI Explorer</h1>
+          <h1 style={styles.title}>FutbolAI - Football Intelligence</h1>
           <p style={styles.subtitle}>
-            Discover movies with AI-powered insights. Get summaries, reviews, and watch trailers instantly.
+            AI-powered football insights, World Cup 2026 coverage, and expert analysis from Reyes Alamo.
           </p>
         </header>
 
         <div style={styles.mainGrid}>
-          {/* Top Section: Search + AI Analysis Side by Side */}
           <div style={styles.topSection}>
             <div style={styles.searchContainer}>
-              <MovieSearch
-                onMovieSelect={setSelectedMovie}
-                onTrailerFound={setTrailerUrl}
+              <FootballSearch
+                onPlayerSelect={setSelectedPlayer}
+                onTeamSelect={setSelectedTeam}
+                onVideoFound={setVideoUrl}
                 onLoadingChange={setIsLoading}
               />
             </div>
             
             <div style={styles.aiContainer}>
-              <AIHost
-                movie={selectedMovie}
+              <FootballAI
+                player={selectedPlayer}
+                team={selectedTeam}
                 isLoading={isLoading}
               />
             </div>
           </div>
 
-          {/* Bottom Section: Trailer (Full Width) */}
-          <div style={styles.trailerSection}>
-            <div style={styles.trailerHeader}>
-              <span>🎬</span>
-              <span>Official Trailer</span>
+          <div style={styles.videoSection}>
+            <div style={styles.videoHeader}>
+              <span>⚽</span>
+              <span>Football Highlights</span>
             </div>
             
             {isLoading ? (
@@ -284,12 +283,12 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            ) : trailerUrl ? (
+            ) : videoUrl ? (
               <>
                 <div style={styles.videoContainer}>
                   <iframe
-                    src={trailerUrl}
-                    title="Movie Trailer"
+                    src={videoUrl}
+                    title="Football Highlights"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     style={styles.iframe}
@@ -297,55 +296,52 @@ export default function Home() {
                 </div>
                 <div style={styles.videoNote}>
                   <span>🔊</span>
-                  <span>Click the fullscreen button for the best viewing experience</span>
+                  <span>Click fullscreen for best viewing experience</span>
                 </div>
               </>
-            ) : selectedMovie ? (
-              <div style={styles.noTrailer}>
-                <div style={styles.placeholderIcon}>🎥</div>
+            ) : selectedPlayer || selectedTeam ? (
+              <div style={styles.noVideo}>
+                <div style={styles.placeholderIcon}>📺</div>
                 <p style={styles.placeholderText}>
-                  No trailer available for "{selectedMovie.title}"
+                  No highlights available
                 </p>
                 <p style={styles.placeholderSubtext}>
-                  Try searching for another movie or check YouTube directly
+                  Try searching for another player or team
                 </p>
               </div>
             ) : (
-              <div style={styles.noTrailer}>
-                <div style={styles.placeholderIcon}>📽️</div>
+              <div style={styles.noVideo}>
+                <div style={styles.placeholderIcon}>⚽</div>
                 <p style={styles.placeholderText}>
-                  Search for a movie above to see its trailer here
+                  Search for a player or team above to see highlights
                 </p>
                 <p style={styles.placeholderSubtext}>
-                  The trailer will appear in this section once you select a movie
+                  Video highlights will appear here
                 </p>
               </div>
             )}
           </div>
           
-          {/* ADDED: Footer Section (Simplified) */}
           <div style={styles.footer}>
             <div style={styles.footerContainer}>
               <div style={styles.footerContent}>
-                {/* Attribution */}
                 <div style={styles.attribution}>
                   <p style={styles.developer}>
                     Developed by <span style={styles.developerName}>A. Guillen</span>
                   </p>
                   <div style={styles.separator}></div>
                   <p style={styles.copyright}>
-                    © {new Date().getFullYear()} Movie AI Explorer
+                    © {new Date().getFullYear()} FutbolAI.org
                   </p>
                 </div>
                 
-                {/* Simplified Disclaimer */}
                 <div style={styles.disclaimerContainer}>
                   <div style={styles.disclaimerTitle}>
                     <span>📽️</span>
                     <span>Content Copyright Notice</span>
                   </div>
                   <p style={styles.disclaimerText}>
-                    Movie posters and trailer videos are property of their respective owners.
+                    Football highlights, player images, and team logos are property of their respective owners.
                     All trademarks and registered trademarks are the property of their respective owners.
                   </p>
                 </div>
