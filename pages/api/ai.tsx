@@ -13,157 +13,75 @@ function getGroqClient() {
 
 // Use Groq to analyze query and generate football insights
 async function analyzeFootballQuery(query: string) {
+  console.log('🤖 Starting AI analysis for:', query);
   const groq = getGroqClient();
   
-  const prompt = `You are FutbolAI, an expert football analyst. Analyze this query: "${query}"
+  const prompt = `You are FutbolAI, an expert football analyst. Analyze: "${query}"
 
-  Generate a comprehensive football analysis with the following structure:
+Return ONLY valid JSON with this exact structure:
+{
+  "analysis": "Detailed football analysis...",
+  "playerInfo": {
+    "name": "Lionel Messi",
+    "position": "Forward",
+    "nationality": "Argentinian",
+    "currentClub": "Inter Miami",
+    "stats": {
+      "goals": 821,
+      "assists": 357,
+      "appearances": 1042
+    },
+    "marketValue": "€35 million",
+    "achievements": ["8x Ballon d'Or", "World Cup 2022", "4x Champions League"]
+  } or null,
+  "teamInfo": null or {
+    "name": "Team Name",
+    "ranking": "Rank",
+    "coach": "Coach Name"
+  },
+  "worldCupInfo": null or {
+    "year": 2026,
+    "host": "USA, Canada, Mexico",
+    "details": "Details here"
+  },
+  "videoSearchTerm": "messi highlights 2024",
+  "confidenceScore": 0.95
+}
 
-  1. **Player Analysis** (if query mentions a player):
-     - Full name, position, nationality, current club
-     - Key career stats (goals, assists, appearances)
-     - Recent performance highlights
-     - Strengths and playing style
-     - Market value and achievements
-
-  2. **Team Analysis** (if query mentions a team):
-     - Full team name, region, FIFA ranking
-     - Manager and key players
-     - Recent performance and trophies
-     - Playing style and tactics
-     - Upcoming fixtures
-
-  3. **World Cup 2026** (if query mentions World Cup):
-     - Host countries and dates
-     - Qualified teams so far
-     - Groups format (48 teams, 16 groups)
-     - Favorites to win
-     - Key players to watch
-
-  4. **General Football Knowledge** (for other queries):
-     - Relevant facts and statistics
-     - Historical context
-     - Current trends in football
-     - Expert insights
-
-  Format the response as JSON with this structure:
-  {
-    "analysis": "detailed text analysis here",
-    "playerInfo": { "name": "...", "position": "...", "stats": {...} } or null,
-    "teamInfo": { "name": "...", "ranking": "...", "coach": "..." } or null,
-    "worldCupInfo": { "year": 2026, "host": "...", "details": "..." } or null,
-    "videoSearchTerm": "term to search on YouTube for highlights",
-    "confidenceScore": 0.9
-  }
-
-  Be factual, concise, and focus on current information (2024-2025 season).`;
+IMPORTANT: Return ONLY JSON, no extra text.`;
 
   try {
+    console.log('🚀 Calling Groq with model: llama-3.3-70b-versatile');
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama-3.3-70b-versatile', // CHANGED: Updated to working model
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.4,
-      max_tokens: 1000,
+      max_tokens: 800,
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
-    console.log('🤖 Groq raw response:', content.substring(0, 200) + '...');
+    console.log('📄 Raw AI response:', content);
     
-    // Try to parse JSON, fallback to default if invalid
-    try {
-      return JSON.parse(content);
-    } catch (parseError) {
-      console.warn('Failed to parse JSON response, using fallback:', parseError);
-      return {
-        analysis: content,
-        playerInfo: null,
-        teamInfo: null,
-        worldCupInfo: null,
-        videoSearchTerm: query,
-        confidenceScore: 0.7
-      };
-    }
+    // Try to parse
+    const parsed = JSON.parse(content);
+    console.log('✅ JSON parsed successfully');
+    return parsed;
+    
   } catch (error: any) {
-    console.error('Groq analysis error:', error);
-    
-    // Provide more specific error message
-    if (error?.message?.includes('model')) {
-      throw new Error(`AI model error: ${error.message}. Check model name in code.`);
-    }
-    if (error?.status === 401) {
-      throw new Error('Invalid API key. Check GROQ_API_KEY in Vercel environment variables.');
-    }
-    throw new Error(`AI analysis failed: ${error.message}`);
+    console.error('❌ Groq error:', error.message);
+    console.error('Error stack:', error.stack);
+    throw error; // Re-throw to see actual error
   }
 }
 
-// Search YouTube for relevant videos
-async function searchYouTube(searchTerm: string) {
-  try {
-    const apiKey = process.env.YOUTUBE_API_KEY;
-    
-    if (!apiKey) {
-      console.warn('YouTube API key not set, using fallback');
-      return generateFallbackVideoUrl(searchTerm);
-    }
+// [Keep the rest of your existing functions: searchYouTube, generateFallbackVideoUrl]
 
-    const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
-      params: {
-        part: 'snippet',
-        q: `${searchTerm} football highlights 2024`,
-        type: 'video',
-        maxResults: 1,
-        key: apiKey,
-        videoEmbeddable: 'true',
-        safeSearch: 'strict',
-      },
-    });
-
-    if (response.data.items?.length > 0) {
-      const videoId = response.data.items[0].id.videoId;
-      return `https://www.youtube.com/embed/${videoId}`;
-    }
-  } catch (error) {
-    console.error('YouTube search error:', error);
-  }
-  
-  return generateFallbackVideoUrl(searchTerm);
-}
-
-// Generate fallback video URL based on query
-function generateFallbackVideoUrl(query: string) {
-  const queryLower = query.toLowerCase();
-  
-  const videoMap: Record<string, string> = {
-    'messi': 'https://www.youtube.com/embed/ZO0d8r_2qGI',
-    'ronaldo': 'https://www.youtube.com/embed/OUKGsb8CpF8',
-    'mbappe': 'https://www.youtube.com/embed/RdGpDPLT5Q4',
-    'haaland': 'https://www.youtube.com/embed/4XqQpQ8KZg4',
-    'neymar': 'https://www.youtube.com/embed/FIYzK8PSLpA',
-    'kane': 'https://www.youtube.com/embed/JKZfpoY0Q7c',
-    'benzema': 'https://www.youtube.com/embed/6kl7AOKVpCM',
-    'argentina': 'https://www.youtube.com/embed/eJXWcJeGXlM',
-    'brazil': 'https://www.youtube.com/embed/6MfLJBHjK0k',
-    'france': 'https://www.youtube.com/embed/J8LcQOHtQKs',
-    'world cup': 'https://www.youtube.com/embed/dZqkf1ZnQh4',
-    'champions league': 'https://www.youtube.com/embed/tKqYfL4hU2c',
-  };
-
-  for (const [key, url] of Object.entries(videoMap)) {
-    if (queryLower.includes(key)) {
-      return url;
-    }
-  }
-
-  return 'https://www.youtube.com/embed/dZqkf1ZnQh4'; // General football highlights
-}
-
-// Main API handler
+// Main API handler - MODIFIED TO SHOW ERRORS
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Set CORS headers
+  // CORS headers
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
@@ -177,67 +95,65 @@ export default async function handler(
   const { action, query } = req.query;
 
   if (action === 'search' && query && typeof query === 'string') {
-    console.log(`🔍 Processing: "${query}"`);
+    console.log(`\n=== NEW REQUEST: "${query}" ===`);
     
     try {
-      // Step 1: Use Groq to analyze the query
+      // Try AI analysis
       const aiAnalysis = await analyzeFootballQuery(query);
-      console.log('✅ AI Analysis complete');
+      console.log('✅ AI Analysis SUCCESS:', aiAnalysis);
       
-      // Step 2: Get YouTube video based on analysis
       const searchTerm = aiAnalysis.videoSearchTerm || query;
       const youtubeUrl = await searchYouTube(searchTerm);
-      console.log('🎬 YouTube URL:', youtubeUrl);
       
-      // Step 3: Construct response
       const response = {
         success: true,
         query: query,
         timestamp: new Date().toISOString(),
-        analysis: aiAnalysis.analysis,
-        playerInfo: aiAnalysis.playerInfo || null,
-        teamInfo: aiAnalysis.teamInfo || null,
-        worldCupInfo: aiAnalysis.worldCupInfo || null,
+        players: aiAnalysis.playerInfo ? [aiAnalysis.playerInfo] : [],
+        teams: aiAnalysis.teamInfo ? [aiAnalysis.teamInfo] : [],
+        worldCupInfo: aiAnalysis.worldCupInfo,
         youtubeUrl: youtubeUrl,
+        analysis: aiAnalysis.analysis,
+        playerInfo: aiAnalysis.playerInfo,
+        teamInfo: aiAnalysis.teamInfo,
         confidence: aiAnalysis.confidenceScore || 0.8,
-        source: 'Groq AI + Football Intelligence',
+        source: 'Groq AI',
+        debug: 'AI_SUCCESS' // Flag to show AI worked
       };
 
+      console.log('📤 Sending AI response');
       return res.status(200).json(response);
       
     } catch (error: any) {
-      console.error('❌ API Error:', error);
+      console.error('❌ API CATCH BLOCK ERROR:', error.message);
+      console.error('Full error:', error);
       
-      // Graceful fallback with more details
+      // Return the ACTUAL error instead of fallback
       return res.status(200).json({
         success: false,
         query: query,
-        error: error.message || 'AI analysis service temporarily unavailable',
-        fallbackResponse: {
-          message: `Searching for "${query}" in football database...`,
-          suggestion: 'Try specific player names (Messi, Ronaldo), team names (Argentina, Brazil), or "World Cup 2026"',
-          youtubeUrl: generateFallbackVideoUrl(query),
-        },
-        timestamp: new Date().toISOString(),
+        error: error.message,
+        errorDetails: error.toString(),
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        isFallback: false, // This is an actual error, not fallback
+        timestamp: new Date().toISOString()
       });
     }
   }
 
-  // API documentation response
+  // API docs
   res.status(200).json({
-    name: 'FutbolAI API',
+    message: 'FutbolAI API is running! 🏆',
     version: '1.0',
-    description: 'AI-powered football intelligence platform',
     endpoints: {
-      search: 'GET /api/ai?action=search&query=your-football-query',
+      search: 'GET /api/ai?action=search&query=your-query',
       examples: [
-        '/api/ai?action=search&query=Lionel Messi stats',
-        '/api/ai?action=search&query=Brazil national team',
-        '/api/ai?action=search&query=World Cup 2026 predictions',
-        '/api/ai?action=search&query=top scorers Champions League 2024',
-      ],
-    },
-    poweredBy: ['Groq AI', 'YouTube API', 'Next.js'],
-    note: 'Add GROQ_API_KEY environment variable for full AI capabilities',
+        '/api/ai?action=search&query=Messi',
+        '/api/ai?action=search&query=Argentina',
+        '/api/ai?action=search&query=World Cup 2026'
+      ]
+    }
   });
 }
+
+// [Add your existing searchYouTube and generateFallbackVideoUrl functions here]
