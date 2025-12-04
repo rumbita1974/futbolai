@@ -8,6 +8,9 @@ interface FootballSearchProps {
   onTeamSelect: (team: any) => void;
   onVideoFound: (url: string) => void;
   onLoadingChange: (loading: boolean) => void;
+  onAnalysisUpdate: (analysis: string) => void;
+  onTeamsUpdate: (teams: any[]) => void;
+  onWorldCupUpdate: (worldCupInfo: any) => void;
 }
 
 export default function FootballSearch({
@@ -15,6 +18,9 @@ export default function FootballSearch({
   onTeamSelect,
   onVideoFound,
   onLoadingChange,
+  onAnalysisUpdate,
+  onTeamsUpdate,
+  onWorldCupUpdate,
 }: FootballSearchProps) {
   const [query, setQuery] = useState('');
 
@@ -24,28 +30,84 @@ export default function FootballSearch({
 
     onLoadingChange(true);
     
-    // Mock search - will connect to your API
-    setTimeout(() => {
-      const mockPlayer = {
-        id: 1,
-        name: 'Lionel Messi',
-        position: 'Forward',
-        nationality: 'Argentina',
-        club: 'Inter Miami',
-        age: 36,
-        goals: 821,
-        assists: 357,
-        appearances: 1034,
-        rating: 9.3,
-      };
+    try {
+      // Call your REAL API endpoint
+      const response = await fetch(`/api/ai?action=search&query=${encodeURIComponent(query)}`);
+      const data = await response.json();
       
-      onPlayerSelect(mockPlayer);
-      onVideoFound('https://www.youtube.com/embed/ZO0d8r_2qGI');
-      onLoadingChange(false);
-    }, 1000);
+      if (data.success) {
+        // Update player info if available
+        if (data.playerInfo) {
+          onPlayerSelect({
+            id: Date.now(), // Generate unique ID
+            name: data.playerInfo.name,
+            position: data.playerInfo.position,
+            nationality: data.playerInfo.nationality,
+            club: data.playerInfo.currentClub,
+            age: null, // Your API doesn't return age
+            goals: data.playerInfo.stats?.goals,
+            assists: data.playerInfo.stats?.assists,
+            appearances: data.playerInfo.stats?.appearances,
+            rating: data.confidence * 10, // Convert 0.95 to 9.5
+            marketValue: data.playerInfo.marketValue,
+            achievements: data.playerInfo.achievements,
+          });
+        }
+        
+        // Update team info if available
+        if (data.teamInfo) {
+          onTeamSelect(data.teamInfo);
+          onTeamsUpdate(data.teams || []);
+        } else {
+          onTeamsUpdate(data.teams || []);
+        }
+        
+        // Update analysis
+        onAnalysisUpdate(data.analysis || `Analysis for ${query}`);
+        
+        // Update World Cup info
+        if (data.worldCupInfo) {
+          onWorldCupUpdate(data.worldCupInfo);
+        }
+        
+        // Update video
+        onVideoFound(data.youtubeUrl);
+        
+      } else {
+        // Handle API error
+        console.error('API Error:', data.error);
+        // Fallback to mock data for now
+        fallbackToMockData();
+      }
+    } catch (error) {
+      console.error('Search failed:', error);
+      fallbackToMockData();
+    }
+    
+    onLoadingChange(false);
   };
 
-  const quickSearches = ['Messi', 'World Cup 2026', 'Argentina', 'Reyes Alamo', 'Brazil', 'Mbappé'];
+  const fallbackToMockData = () => {
+    // Fallback mock data
+    const mockPlayer = {
+      id: 1,
+      name: 'Lionel Messi',
+      position: 'Forward',
+      nationality: 'Argentina',
+      club: 'Inter Miami',
+      age: 36,
+      goals: 821,
+      assists: 357,
+      appearances: 1034,
+      rating: 9.3,
+    };
+    
+    onPlayerSelect(mockPlayer);
+    onVideoFound('https://www.youtube.com/embed/ZO0d8r_2qGI');
+    onAnalysisUpdate('Football analysis service is temporarily unavailable. Showing sample data.');
+  };
+
+  const quickSearches = ['Messi', 'World Cup 2026', 'Argentina', 'Brazil', 'Mbappé', 'Real Madrid', 'Champions League'];
 
   return (
     <div>
@@ -96,7 +158,12 @@ export default function FootballSearch({
         {quickSearches.map((term) => (
           <button
             key={term}
-            onClick={() => setQuery(term)}
+            onClick={() => {
+              setQuery(term);
+              // Auto-search when clicking quick search
+              const syntheticEvent = { preventDefault: () => {} } as React.FormEvent;
+              handleSearch(syntheticEvent);
+            }}
             style={{
               padding: '0.5rem 1rem',
               background: 'rgba(255, 255, 255, 0.1)',

@@ -7,6 +7,9 @@ export default function Home() {
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
+  const [analysis, setAnalysis] = useState<string>('');
+  const [teams, setTeams] = useState<any[]>([]);
+  const [worldCupInfo, setWorldCupInfo] = useState<any>(null);
 
   const styles = {
     container: {
@@ -257,6 +260,9 @@ export default function Home() {
                 onTeamSelect={setSelectedTeam}
                 onVideoFound={setVideoUrl}
                 onLoadingChange={setIsLoading}
+                onAnalysisUpdate={setAnalysis}
+                onTeamsUpdate={setTeams}
+                onWorldCupUpdate={setWorldCupInfo}
               />
             </div>
             
@@ -265,6 +271,9 @@ export default function Home() {
                 player={selectedPlayer}
                 team={selectedTeam}
                 isLoading={isLoading}
+                analysis={analysis}
+                teams={teams}
+                worldCupInfo={worldCupInfo}
               />
             </div>
           </div>
