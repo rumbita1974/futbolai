@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 interface FootballAIProps {
   player: any;
   team: any;
@@ -7,6 +9,13 @@ interface FootballAIProps {
   worldCupInfo?: any;
 }
 
+// Add CSS for spinner animation - moved OUTSIDE component
+const SPINNER_STYLES = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
 export default function FootballAI({ 
   player, 
   team, 
@@ -15,6 +24,24 @@ export default function FootballAI({
   teams,
   worldCupInfo 
 }: FootballAIProps) {
+  // Add spinner styles safely for SSR
+  const addSpinnerStyles = () => {
+    if (typeof document !== 'undefined') {
+      // Check if style already exists
+      if (!document.querySelector('style[data-spinner]')) {
+        const styleTag = document.createElement('style');
+        styleTag.setAttribute('data-spinner', 'true');
+        styleTag.textContent = SPINNER_STYLES;
+        document.head.appendChild(styleTag);
+      }
+    }
+  };
+
+  // Add styles on component mount
+  useEffect(() => {
+    addSpinnerStyles();
+  }, []);
+
   if (isLoading) {
     return (
       <div style={{
@@ -292,12 +319,3 @@ export default function FootballAI({
     </div>
   );
 }
-
-// Add CSS for spinner animation
-const styleTag = document.createElement('style');
-styleTag.textContent = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(styleTag);

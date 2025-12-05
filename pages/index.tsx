@@ -340,7 +340,7 @@ export default function Home() {
                   </p>
                   <div style={styles.separator}></div>
                   <p style={styles.copyright}>
-                    © {new Date().getFullYear()} FutbolAI.org
+                    © 2025 FutbolAI.org
                   </p>
                 </div>
                 
