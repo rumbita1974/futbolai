@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react';
-// REMOVED: import { Search } from 'lucide-react';
 
 interface FootballSearchProps {
   onPlayerSelect: (player: any) => void;
@@ -36,39 +35,65 @@ export default function FootballSearch({
       const data = await response.json();
       
       if (data.success) {
-        // Update player info if available
-        if (data.playerInfo) {
+        // CLEAR previous selections first
+        onPlayerSelect(null);
+        onTeamSelect(null);
+        onWorldCupUpdate(null);
+        onTeamsUpdate([]);
+        
+        // Check response TYPE to know what to display
+        console.log('API Response type:', data.type);
+        console.log('Player info:', data.playerInfo);
+        console.log('Team info:', data.teamInfo);
+        
+        if (data.type === 'player' && data.playerInfo) {
+          console.log('Setting player data');
           onPlayerSelect({
-            id: Date.now(), // Generate unique ID
+            id: Date.now(),
             name: data.playerInfo.name,
             position: data.playerInfo.position,
             nationality: data.playerInfo.nationality,
             club: data.playerInfo.currentClub,
-            age: null, // Your API doesn't return age
-            goals: data.playerInfo.stats?.goals,
-            assists: data.playerInfo.stats?.assists,
-            appearances: data.playerInfo.stats?.appearances,
-            rating: data.confidence * 10, // Convert 0.95 to 9.5
+            age: null,
+            goals: data.playerInfo.stats?.goals || 0,
+            assists: data.playerInfo.stats?.assists || 0,
+            appearances: data.playerInfo.stats?.appearances || 0,
+            rating: data.confidence * 10,
             marketValue: data.playerInfo.marketValue,
-            achievements: data.playerInfo.achievements,
+            achievements: data.playerInfo.achievements || [],
+          });
+        } 
+        else if (data.type === 'team' && data.teamInfo) {
+          console.log('Setting team data');
+          onTeamSelect({
+            id: Date.now(),
+            name: data.teamInfo.name,
+            ranking: data.teamInfo.ranking || 'N/A',
+            coach: data.teamInfo.coach || 'Unknown',
+            stadium: data.teamInfo.stadium || 'Unknown',
+            league: data.teamInfo.league || 'Unknown',
+            founded: data.teamInfo.founded || 'Unknown',
+            achievements: data.teamInfo.achievements || [],
+            keyPlayers: data.teamInfo.keyPlayers || [],
           });
         }
-        
-        // Update team info if available
-        if (data.teamInfo) {
-          onTeamSelect(data.teamInfo);
-          onTeamsUpdate(data.teams || []);
-        } else {
-          onTeamsUpdate(data.teams || []);
+        else if (data.type === 'worldCup' && data.worldCupInfo) {
+          console.log('Setting World Cup data');
+          onWorldCupUpdate({
+            year: data.worldCupInfo.year,
+            host: data.worldCupInfo.host,
+            details: data.worldCupInfo.details,
+            qualifiedTeams: data.worldCupInfo.qualifiedTeams || [],
+            venues: data.worldCupInfo.venues || [],
+          });
+        }
+        else {
+          console.log('General query - no specific data');
+          // For general queries, just show analysis
         }
         
-        // Update analysis
+        // Update analysis (always available)
         onAnalysisUpdate(data.analysis || `Analysis for ${query}`);
-        
-        // Update World Cup info
-        if (data.worldCupInfo) {
-          onWorldCupUpdate(data.worldCupInfo);
-        }
         
         // Update video
         onVideoFound(data.youtubeUrl);
@@ -76,7 +101,6 @@ export default function FootballSearch({
       } else {
         // Handle API error
         console.error('API Error:', data.error);
-        // Fallback to mock data for now
         fallbackToMockData();
       }
     } catch (error) {
@@ -88,26 +112,40 @@ export default function FootballSearch({
   };
 
   const fallbackToMockData = () => {
-    // Fallback mock data
-    const mockPlayer = {
+    // Clear previous
+    onPlayerSelect(null);
+    onTeamSelect(null);
+    onWorldCupUpdate(null);
+    
+    // Fallback mock data - TEAM example
+    const mockTeam = {
       id: 1,
-      name: 'Lionel Messi',
-      position: 'Forward',
-      nationality: 'Argentina',
-      club: 'Inter Miami',
-      age: 36,
-      goals: 821,
-      assists: 357,
-      appearances: 1034,
-      rating: 9.3,
+      name: 'Real Madrid',
+      ranking: '1st in La Liga',
+      coach: 'Carlo Ancelotti',
+      stadium: 'Santiago Bernabéu',
+      league: 'La Liga',
+      founded: 1902,
+      achievements: ['14 Champions League titles', '35 La Liga titles'],
+      keyPlayers: ['Vinicius Junior', 'Jude Bellingham', 'Thibaut Courtois'],
     };
     
-    onPlayerSelect(mockPlayer);
-    onVideoFound('https://www.youtube.com/embed/ZO0d8r_2qGI');
-    onAnalysisUpdate('Football analysis service is temporarily unavailable. Showing sample data.');
+    onTeamSelect(mockTeam);
+    onVideoFound('https://www.youtube.com/embed/XfyZ6EueJx8');
+    onAnalysisUpdate('Football analysis service is temporarily unavailable. Showing sample team data for Real Madrid.');
   };
 
-  const quickSearches = ['Messi', 'World Cup 2026', 'Argentina', 'Brazil', 'Mbappé', 'Real Madrid', 'Champions League'];
+  const quickSearches = [
+    'Messi', 
+    'World Cup 2026', 
+    'Argentina', 
+    'Brazil', 
+    'Mbappé', 
+    'Real Madrid', 
+    'Champions League',
+    'Manchester City',
+    'Karim Benzema'
+  ];
 
   return (
     <div>
@@ -116,7 +154,6 @@ export default function FootballSearch({
       </h2>
       <form onSubmit={handleSearch} style={{ display: 'flex', gap: '1rem' }}>
         <div style={{ flex: 1, position: 'relative' }}>
-          {/* REMOVED: Search icon component */}
           <div style={{
             position: 'absolute',
             left: '1rem',
@@ -140,7 +177,11 @@ export default function FootballSearch({
               borderRadius: '0.75rem',
               color: 'white',
               fontSize: '1rem',
+              outline: 'none',
+              transition: 'border-color 0.2s',
             }}
+            onFocus={(e) => e.target.style.borderColor = 'rgba(74, 222, 128, 0.5)'}
+            onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)'}
           />
         </div>
         <button
@@ -153,6 +194,15 @@ export default function FootballSearch({
             borderRadius: '0.75rem',
             fontWeight: 600,
             cursor: 'pointer',
+            transition: 'transform 0.2s, opacity 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.opacity = '1';
           }}
         >
           Search
@@ -176,6 +226,17 @@ export default function FootballSearch({
               color: 'white',
               fontSize: '0.875rem',
               cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(74, 222, 128, 0.2)';
+              e.currentTarget.style.borderColor = 'rgba(74, 222, 128, 0.5)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+              e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
             {term}

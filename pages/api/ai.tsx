@@ -18,37 +18,92 @@ async function analyzeFootballQuery(query: string) {
   
   const prompt = `You are FutbolAI, an expert football analyst. Analyze: "${query}"
 
-Return ONLY valid JSON with this exact structure:
+DETERMINE if this is about:
+1. A PLAYER (individual footballer) - return playerInfo
+2. A TEAM (club or national team) - return teamInfo  
+3. WORLD CUP - return worldCupInfo
+4. GENERAL - return only analysis
+
+IMPORTANT EXAMPLES:
+- "Messi" → PLAYER
+- "lionel messi" → PLAYER
+- "karim benzema" → PLAYER
+- "real madrid" → TEAM
+- "manchester city" → TEAM
+- "argentina" → TEAM
+- "brazil national team" → TEAM
+- "world cup 2026" → WORLD CUP
+- "fifa world cup" → WORLD CUP
+- "world cup" → WORLD CUP
+- "best football players" → GENERAL
+- "top strikers" → GENERAL
+
+Return ONLY valid JSON with ONE of these structures:
+
+FOR PLAYER:
 {
-  "analysis": "Detailed football analysis...",
   "playerInfo": {
-    "name": "Player Name",
-    "position": "Position",
-    "nationality": "Nationality",
-    "currentClub": "Current Club",
-    "stats": {
-      "goals": 0,
-      "assists": 0,
-      "appearances": 0
-    },
-    "marketValue": "Value",
-    "achievements": ["Achievement 1", "Achievement 2"]
-  } or null,
-  "teamInfo": null or {
-    "name": "Team Name",
-    "ranking": "Rank",
-    "coach": "Coach Name"
+    "name": "Lionel Messi",
+    "position": "Forward",
+    "nationality": "Argentinian",
+    "currentClub": "Inter Miami",
+    "stats": {"goals": 821, "assists": 361, "appearances": 1043},
+    "marketValue": "€35M",
+    "achievements": ["World Cup 2022", "7 Ballon d'Or", "4 Champions League"]
   },
-  "worldCupInfo": null or {
-    "year": 2026,
-    "host": "USA, Canada, Mexico",
-    "details": "Details here"
-  },
-  "videoSearchTerm": "player highlights 2024",
+  "teamInfo": null,
+  "worldCupInfo": null,
+  "analysis": "Lionel Messi is considered one of the greatest footballers of all time...",
+  "videoSearchTerm": "Lionel Messi highlights 2024",
   "confidenceScore": 0.95
 }
 
-IMPORTANT: Return ONLY JSON, no extra text.`;
+FOR TEAM:
+{
+  "playerInfo": null,
+  "teamInfo": {
+    "name": "Real Madrid",
+    "ranking": "1st in La Liga",
+    "coach": "Carlo Ancelotti", 
+    "stadium": "Santiago Bernabéu",
+    "league": "La Liga",
+    "founded": 1902,
+    "achievements": ["14 Champions League titles", "35 La Liga titles"],
+    "keyPlayers": ["Vinicius Junior", "Jude Bellingham", "Thibaut Courtois"]
+  },
+  "worldCupInfo": null,
+  "analysis": "Real Madrid is one of the most successful football clubs in history...",
+  "videoSearchTerm": "Real Madrid highlights 2024",
+  "confidenceScore": 0.95
+}
+
+FOR WORLD CUP:
+{
+  "playerInfo": null,
+  "teamInfo": null,
+  "worldCupInfo": {
+    "year": 2026,
+    "host": "USA, Canada, Mexico",
+    "details": "2026 FIFA World Cup will be the first to feature 48 teams...",
+    "qualifiedTeams": ["USA", "Canada", "Mexico", "Argentina", "France", "Brazil"],
+    "venues": ["MetLife Stadium", "SoFi Stadium", "Azteca Stadium"]
+  },
+  "analysis": "The 2026 FIFA World Cup will be hosted across North America...",
+  "videoSearchTerm": "World Cup 2026",
+  "confidenceScore": 0.95
+}
+
+FOR GENERAL QUERIES:
+{
+  "playerInfo": null,
+  "teamInfo": null,
+  "worldCupInfo": null,
+  "analysis": "Your query about general football topics...",
+  "videoSearchTerm": "football highlights 2024",
+  "confidenceScore": 0.8
+}
+
+Return ONLY JSON, no extra text.`;
 
   try {
     console.log('🚀 Calling Groq with model: llama-3.3-70b-versatile');
@@ -69,7 +124,6 @@ IMPORTANT: Return ONLY JSON, no extra text.`;
     
   } catch (error: any) {
     console.error('❌ Groq error:', error.message);
-    console.error('Error stack:', error.stack);
     throw error;
   }
 }
@@ -87,7 +141,7 @@ async function searchYouTube(searchTerm: string) {
     const response = await axios.get('https://www.googleapis.com/youtube/v3/search', {
       params: {
         part: 'snippet',
-        q: `${searchTerm} football highlights 2024`,
+        q: `${searchTerm} football highlights`,
         type: 'video',
         maxResults: 1,
         key: apiKey,
@@ -112,19 +166,29 @@ function generateFallbackVideoUrl(query: string) {
   const queryLower = query.toLowerCase();
   
   const videoMap: Record<string, string> = {
+    // Players
     'messi': 'https://www.youtube.com/embed/ZO0d8r_2qGI',
     'ronaldo': 'https://www.youtube.com/embed/OUKGsb8CpF8',
     'mbappe': 'https://www.youtube.com/embed/RdGpDPLT5Q4',
     'haaland': 'https://www.youtube.com/embed/4XqQpQ8KZg4',
     'neymar': 'https://www.youtube.com/embed/FIYzK8PSLpA',
-    'kane': 'https://www.youtube.com/embed/JKZfpoY0Q7c',
     'benzema': 'https://www.youtube.com/embed/6kl7AOKVpCM',
+    'carvajal': 'https://www.youtube.com/embed/6MfLJBHjK0k',
+    
+    // Teams
+    'real madrid': 'https://www.youtube.com/embed/XfyZ6EueJx8',
+    'barcelona': 'https://www.youtube.com/embed/3X7XG5KZiUY',
+    'manchester city': 'https://www.youtube.com/embed/KXwHEvDE2-U',
+    'liverpool': 'https://www.youtube.com/embed/6MfLJBHjK0k',
     'argentina': 'https://www.youtube.com/embed/eJXWcJeGXlM',
     'brazil': 'https://www.youtube.com/embed/6MfLJBHjK0k',
     'france': 'https://www.youtube.com/embed/J8LcQOHtQKs',
+    'spain': 'https://www.youtube.com/embed/6MfLJBHjK0k',
+    
+    // World Cup
     'world cup': 'https://www.youtube.com/embed/dZqkf1ZnQh4',
-    'champions league': 'https://www.youtube.com/embed/tKqYfL4hU2c',
-    'carvajal': 'https://www.youtube.com/embed/dZqkf1ZnQh4', // General fallback
+    'world cup 2026': 'https://www.youtube.com/embed/dZqkf1ZnQh4',
+    'fifa world cup': 'https://www.youtube.com/embed/dZqkf1ZnQh4',
   };
 
   for (const [key, url] of Object.entries(videoMap)) {
@@ -133,7 +197,7 @@ function generateFallbackVideoUrl(query: string) {
     }
   }
 
-  return 'https://www.youtube.com/embed/dZqkf1ZnQh4';
+  return 'https://www.youtube.com/embed/dZqkf1ZnQh4'; // Default football highlights
 }
 
 // Main API handler
@@ -162,6 +226,14 @@ export default async function handler(
       const aiAnalysis = await analyzeFootballQuery(query);
       console.log('✅ AI Analysis SUCCESS');
       
+      // Determine response type
+      let responseType = 'general';
+      if (aiAnalysis.playerInfo) responseType = 'player';
+      if (aiAnalysis.teamInfo) responseType = 'team';
+      if (aiAnalysis.worldCupInfo) responseType = 'worldCup';
+      
+      console.log(`📊 Response type: ${responseType}`);
+      
       const searchTerm = aiAnalysis.videoSearchTerm || query;
       const youtubeUrl = await searchYouTube(searchTerm);
       
@@ -169,32 +241,39 @@ export default async function handler(
         success: true,
         query: query,
         timestamp: new Date().toISOString(),
-        players: aiAnalysis.playerInfo ? [aiAnalysis.playerInfo] : [],
-        teams: aiAnalysis.teamInfo ? [aiAnalysis.teamInfo] : [],
+        type: responseType,
+        data: aiAnalysis.playerInfo || aiAnalysis.teamInfo || aiAnalysis.worldCupInfo || null,
+        playerInfo: aiAnalysis.playerInfo || null,
+        teamInfo: aiAnalysis.teamInfo || null,
         worldCupInfo: aiAnalysis.worldCupInfo || null,
         youtubeUrl: youtubeUrl,
         analysis: aiAnalysis.analysis || `Analysis of ${query}`,
-        playerInfo: aiAnalysis.playerInfo || null,
-        teamInfo: aiAnalysis.teamInfo || null,
         confidence: aiAnalysis.confidenceScore || 0.8,
         source: 'Groq AI',
         debug: 'AI_SUCCESS'
       };
 
-      console.log('📤 Sending AI response');
+      console.log('📤 Sending response:', { 
+        type: responseType,
+        hasPlayer: !!aiAnalysis.playerInfo,
+        hasTeam: !!aiAnalysis.teamInfo,
+        hasWorldCup: !!aiAnalysis.worldCupInfo
+      });
+      
       return res.status(200).json(response);
       
     } catch (error: any) {
       console.error('❌ API CATCH BLOCK ERROR:', error.message);
       
-      // For now, return error to debug
+      // Return fallback response
       return res.status(200).json({
         success: false,
         query: query,
-        error: error.message,
-        errorDetails: error.toString(),
+        type: 'error',
+        error: 'Failed to process query',
         timestamp: new Date().toISOString(),
         youtubeUrl: generateFallbackVideoUrl(query),
+        analysis: `Could not analyze "${query}". Please try a different search.`,
         debug: 'AI_FAILED'
       });
     }
@@ -203,13 +282,13 @@ export default async function handler(
   // API docs
   res.status(200).json({
     message: 'FutbolAI API is running! 🏆',
-    version: '1.0',
+    version: '2.0',
     endpoints: {
       search: 'GET /api/ai?action=search&query=your-query',
       examples: [
         '/api/ai?action=search&query=Messi',
-        '/api/ai?action=search&query=Argentina',
-        '/api/ai?action=search&query=World Cup 2026'
+        '/api/ai?action=search&query=Real%20Madrid',
+        '/api/ai?action=search&query=World%20Cup%202026'
       ]
     }
   });
