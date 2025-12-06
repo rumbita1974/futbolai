@@ -1,43 +1,42 @@
+import type { NextApiRequest, NextApiResponse } from 'next';
 import { Groq } from 'groq-sdk';
 
-export default async function handler(req: any, res: any) {
-  try {
-    const apiKey = process.env.GROQ_API_KEY;
-    
-    if (!apiKey) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'GROQ_API_KEY not found in environment variables' 
-      });
-    }
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const apiKey = process.env.GROQ_API_KEY;
+  
+  if (!apiKey) {
+    return res.status(500).json({ error: 'GROQ_API_KEY not set' });
+  }
 
+  try {
     const groq = new Groq({ apiKey });
     
+    // Simple test request
     const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: 'Hello, say hi in Spanish' }],
-      model: 'llama-3.3-70b-versatile', // CHANGED HERE
-      temperature: 0.7,
-      max_tokens: 100,
+      messages: [{ role: 'user', content: 'Say "Hello World"' }],
+      model: 'mixtral-8x7b-32768',
+      temperature: 0.1,
+      max_tokens: 10,
     });
 
+    const response = completion.choices[0]?.message?.content || 'No response';
+    
     res.status(200).json({
       success: true,
-      message: 'Groq API connection successful',
-      response: completion.choices[0]?.message?.content,
-      model: 'llama-3.3-70b-versatile',
-      keyStatus: `Present (first 5 chars): ${apiKey.substring(0, 5)}...`
+      message: 'Groq API is working',
+      response: response,
+      model: 'mixtral-8x7b-32768'
     });
     
   } catch (error: any) {
-    console.error('Groq test error:', error);
-    
     res.status(500).json({
       success: false,
       error: error.message,
-      details: error.response?.data || error,
-      keyUsed: process.env.GROQ_API_KEY 
-        ? `Present (first 5 chars): ${process.env.GROQ_API_KEY.substring(0, 5)}...`
-        : 'Not found'
+      details: {
+        status: error.status,
+        code: error.code,
+        type: error.type
+      }
     });
   }
 }
