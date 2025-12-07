@@ -70,8 +70,8 @@ function detectQueryType(query: string): string {
   return 'player';
 }
 
-// Simple JSON parsing
-function safeParseJSON(content: string) {
+// Simple JSON parsing - FIXED: Added query parameter
+function safeParseJSON(content: string, query: string) {
   try {
     let cleaned = content.trim();
     
@@ -138,7 +138,7 @@ videoSearchTerm: "World Cup football highlights"`;
     });
 
     const content = completion.choices[0]?.message?.content || '{}';
-    return safeParseJSON(content);
+    return safeParseJSON(content, query);
     
   } catch (error) {
     console.error('Groq error:', error);
