@@ -9,7 +9,7 @@ interface FootballAIProps {
   worldCupInfo?: any;
 }
 
-// Add CSS for spinner animation - moved OUTSIDE component
+// Add CSS for spinner animation
 const SPINNER_STYLES = `
   @keyframes spin {
     to { transform: rotate(360deg); }
@@ -32,7 +32,6 @@ export default function FootballAI({
   // Add spinner styles safely for SSR
   const addSpinnerStyles = () => {
     if (typeof document !== 'undefined') {
-      // Check if style already exists
       if (!document.querySelector('style[data-spinner]')) {
         const styleTag = document.createElement('style');
         styleTag.setAttribute('data-spinner', 'true');
@@ -42,10 +41,171 @@ export default function FootballAI({
     }
   };
 
-  // Add styles on component mount
   useEffect(() => {
     addSpinnerStyles();
   }, []);
+
+  // Helper function to render structured achievements
+  const renderStructuredAchievements = (entity: any) => {
+    if (!entity) return null;
+    
+    const isNationalTeam = entity.type === 'national';
+    const isClub = entity.type === 'club';
+    
+    // New API format with achievementsSummary
+    if (entity.achievementsSummary) {
+      const { achievementsSummary } = entity;
+      
+      if (isNationalTeam) {
+        return (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '1rem',
+            marginTop: '1rem'
+          }}>
+            {achievementsSummary.worldCupTitles > 0 && (
+              <AchievementCard 
+                icon="🌍" 
+                label="World Cup Titles" 
+                value={achievementsSummary.worldCupTitles}
+                color="#3b82f6"
+              />
+            )}
+            {achievementsSummary.continentalTitles > 0 && (
+              <AchievementCard 
+                icon="🏆" 
+                label="Continental Titles" 
+                value={achievementsSummary.continentalTitles}
+                color="#10b981"
+              />
+            )}
+          </div>
+        );
+      }
+      
+      if (isClub) {
+        return (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+            gap: '1rem',
+            marginTop: '1rem'
+          }}>
+            {achievementsSummary.continentalTitles > 0 && (
+              <AchievementCard 
+                icon="⭐" 
+                label="Continental Titles" 
+                value={achievementsSummary.continentalTitles}
+                color="#8b5cf6"
+              />
+            )}
+            {achievementsSummary.internationalTitles > 0 && (
+              <AchievementCard 
+                icon="🌎" 
+                label="International Titles" 
+                value={achievementsSummary.internationalTitles}
+                color="#f59e0b"
+              />
+            )}
+            {achievementsSummary.domesticTitles?.leagues > 0 && (
+              <AchievementCard 
+                icon="🥇" 
+                label="League Titles" 
+                value={achievementsSummary.domesticTitles.leagues}
+                color="#4ade80"
+              />
+            )}
+            {achievementsSummary.domesticTitles?.cups > 0 && (
+              <AchievementCard 
+                icon="🏆" 
+                label="Cup Titles" 
+                value={achievementsSummary.domesticTitles.cups}
+                color="#22d3ee"
+              />
+            )}
+          </div>
+        );
+      }
+    }
+    
+    // Old format fallback - trophies
+    if (entity.trophies) {
+      const trophyItems = [];
+      const { trophies } = entity;
+      
+      if (trophies.domestic) trophyItems.push(...trophies.domestic);
+      if (trophies.continental) trophyItems.push(...trophies.continental);
+      if (trophies.worldwide) trophyItems.push(...trophies.worldwide);
+      
+      if (trophyItems.length > 0) {
+        return (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem' }}>
+            {trophyItems.map((trophy: any, index: number) => (
+              <div 
+                key={index}
+                style={{
+                  padding: '0.75rem 1.25rem',
+                  background: 'rgba(251, 191, 36, 0.1)',
+                  borderRadius: '0.75rem',
+                  border: '1px solid rgba(251, 191, 36, 0.2)',
+                  fontSize: '0.9375rem',
+                  color: '#fbbf24',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
+                <span>{trophy.icon || '🏆'}</span>
+                <span>{trophy.competition}: {trophy.wins}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+    }
+    
+    // Fallback to achievements array
+    if (entity.achievements && entity.achievements.length > 0) {
+      return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '1rem' }}>
+          {entity.achievements.map((achievement: string, index: number) => (
+            <div 
+              key={index}
+              style={{
+                padding: '0.75rem 1.25rem',
+                background: 'rgba(251, 191, 36, 0.1)',
+                borderRadius: '0.75rem',
+                border: '1px solid rgba(251, 191, 36, 0.2)',
+                fontSize: '0.9375rem',
+                color: '#fbbf24',
+              }}
+            >
+              {achievement}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
+  // Get player stats from new API format
+  const getPlayerStats = () => {
+    if (!player || !player.careerStats) return null;
+    
+    const { careerStats } = player;
+    return {
+      goals: careerStats.club?.totalGoals || 0,
+      assists: careerStats.club?.totalAssists || 0,
+      appearances: careerStats.club?.totalAppearances || 0,
+      internationalCaps: careerStats.international?.caps || 0,
+      internationalGoals: careerStats.international?.goals || 0,
+    };
+  };
+
+  const playerStats = getPlayerStats();
 
   if (isLoading) {
     return (
@@ -78,8 +238,8 @@ export default function FootballAI({
   if (player || team || worldCupInfo) {
     const entity = player || team;
     const isNationalTeam = team?.type === 'national';
+    const isClub = team?.type === 'club';
     
-    // FIXED: Determine title safely
     let title = 'Football Analysis';
     if (player?.name || team?.name) {
       title = player?.name || team?.name;
@@ -89,7 +249,7 @@ export default function FootballAI({
     
     return (
       <div style={{ animation: 'fadeIn 0.5s ease-out' }}>
-        {/* Header - FIXED VERSION */}
+        {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h2 style={{ 
             fontSize: '2.5rem', 
@@ -119,6 +279,22 @@ export default function FootballAI({
             }}>
               <span style={{ fontSize: '0.75rem', color: '#3b82f6' }}>🌍</span>
               <span style={{ fontSize: '0.875rem', color: '#93c5fd' }}>National Team</span>
+            </div>
+          )}
+          
+          {entity?.type === 'club' && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.25rem 1rem',
+              background: 'rgba(251, 191, 36, 0.1)',
+              border: '1px solid rgba(251, 191, 36, 0.3)',
+              borderRadius: '999px',
+              marginBottom: '1rem',
+            }}>
+              <span style={{ fontSize: '0.75rem', color: '#fbbf24' }}>🏟️</span>
+              <span style={{ fontSize: '0.875rem', color: '#fde68a' }}>Football Club</span>
             </div>
           )}
         </div>
@@ -156,31 +332,15 @@ export default function FootballAI({
             }}>
               {analysis}
             </p>
-            
-            {/* Video Status Info */}
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              background: 'rgba(59, 130, 246, 0.1)',
-              borderRadius: '0.5rem',
-              border: '1px solid rgba(59, 130, 246, 0.2)',
-              fontSize: '0.875rem',
-              color: '#93c5fd',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span>🎬</span>
-                <span>AI-selected video highlights available below</span>
-              </div>
-              <div style={{ 
-                marginTop: '0.5rem', 
-                fontSize: '0.75rem', 
-                color: '#cbd5e1',
-                fontStyle: 'italic'
-              }}>
-                Dynamically fetched from YouTube based on AI search
-              </div>
-            </div>
           </div>
+        )}
+        
+        {/* ACHIEVEMENTS SECTION */}
+        {((team && (team.achievementsSummary || team.trophies || team.achievements)) || 
+          (player && player.achievementsSummary)) && (
+          <Section title="🏆 Achievements" icon="🏆" animationDelay="0.2s">
+            {renderStructuredAchievements(entity)}
+          </Section>
         )}
         
         {/* BASIC INFO GRID */}
@@ -190,14 +350,14 @@ export default function FootballAI({
             gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1rem',
             marginBottom: '2rem',
-            animation: 'fadeIn 0.6s ease-out 0.2s both',
+            animation: 'fadeIn 0.6s ease-out 0.3s both',
           }}>
             {player && (
               <>
                 <InfoCard label="Position" value={player.position || 'Unknown'} color="#4ade80" />
                 <InfoCard label="Nationality" value={player.nationality || 'Unknown'} color="#22d3ee" />
-                <InfoCard label="Current Club" value={player.club || 'Unknown'} color="#fbbf24" />
-                {player.marketValue && player.marketValue !== 'Unknown' && (
+                <InfoCard label="Current Club" value={player.currentClub || 'Unknown'} color="#fbbf24" />
+                {player.marketValue && (
                   <InfoCard label="Market Value" value={player.marketValue} color="#8b5cf6" />
                 )}
               </>
@@ -205,22 +365,26 @@ export default function FootballAI({
             
             {team && (
               <>
-                {team.ranking && team.ranking !== 'N/A' && (
+                {team.fifaRanking && (
                   <InfoCard 
                     label={isNationalTeam ? "FIFA Ranking" : "Current Ranking"} 
-                    value={team.ranking} 
+                    value={team.fifaRanking} 
                     color="#4ade80" 
                   />
                 )}
-                <InfoCard label={isNationalTeam ? "Coach" : "Manager"} value={team.coach || 'Unknown'} color="#22d3ee" />
-                <InfoCard label="Stadium" value={team.stadium || 'Unknown'} color="#fbbf24" />
-                {team.stadiumCapacity && team.stadiumCapacity !== 'Unknown' && (
-                  <InfoCard label="Capacity" value={team.stadiumCapacity} color="#8b5cf6" />
+                <InfoCard 
+                  label={isNationalTeam ? "Coach" : "Manager"} 
+                  value={team.currentCoach?.name || team.currentManager?.name || 'Unknown'} 
+                  color="#22d3ee" 
+                />
+                <InfoCard label="Stadium" value={team.stadium?.name || team.homeStadium || 'Unknown'} color="#fbbf24" />
+                {team.stadium?.capacity && (
+                  <InfoCard label="Capacity" value={team.stadium.capacity} color="#8b5cf6" />
                 )}
-                {team.league && team.league !== 'Unknown' && !isNationalTeam && (
+                {team.league && !isNationalTeam && (
                   <InfoCard label="League" value={team.league} color="#ef4444" />
                 )}
-                {team.founded && team.founded !== 'Unknown' && (
+                {team.founded && (
                   <InfoCard label="Founded" value={team.founded} color="#10b981" />
                 )}
               </>
@@ -232,23 +396,23 @@ export default function FootballAI({
         {player && (
           <>
             {/* Career Statistics */}
-            {(player.goals > 0 || player.assists > 0 || player.appearances > 0) && (
-              <Section title="Career Statistics" icon="📊" animationDelay="0.3s">
+            {playerStats && (playerStats.goals > 0 || playerStats.assists > 0 || playerStats.appearances > 0) && (
+              <Section title="Career Statistics" icon="📊" animationDelay="0.4s">
                 <div style={{ 
                   display: 'grid', 
-                  gridTemplateColumns: player.internationalCaps > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', 
+                  gridTemplateColumns: playerStats.internationalCaps > 0 ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', 
                   gap: '1.5rem',
                   textAlign: 'center',
                 }}>
-                  <StatCard value={player.goals || 0} label="Total Goals" color="#4ade80" />
-                  <StatCard value={player.assists || 0} label="Total Assists" color="#22d3ee" />
-                  <StatCard value={player.appearances || 0} label="Appearances" color="#fbbf24" />
-                  {player.internationalCaps > 0 && (
+                  <StatCard value={playerStats.goals} label="Total Goals" color="#4ade80" />
+                  <StatCard value={playerStats.assists} label="Total Assists" color="#22d3ee" />
+                  <StatCard value={playerStats.appearances} label="Appearances" color="#fbbf24" />
+                  {playerStats.internationalCaps > 0 && (
                     <StatCard 
-                      value={player.internationalCaps} 
+                      value={playerStats.internationalCaps} 
                       label="International Caps" 
                       color="#8b5cf6"
-                      subValue={player.internationalGoals > 0 ? `${player.internationalGoals} goals` : undefined}
+                      subValue={playerStats.internationalGoals > 0 ? `${playerStats.internationalGoals} goals` : undefined}
                     />
                   )}
                 </div>
@@ -256,8 +420,8 @@ export default function FootballAI({
             )}
             
             {/* Player Details */}
-            {(player.height || player.strongFoot || player.dateOfBirth || player.playingStyle) && (
-              <Section title="Player Details" icon="ℹ️" animationDelay="0.4s">
+            {(player.height || player.preferredFoot || player.dateOfBirth || player.playingStyle) && (
+              <Section title="Player Details" icon="ℹ️" animationDelay="0.5s">
                 <div style={{ 
                   display: 'grid', 
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
@@ -269,8 +433,8 @@ export default function FootballAI({
                   {player.height && (
                     <InfoCard label="Height" value={player.height} color="#3b82f6" />
                   )}
-                  {player.strongFoot && player.strongFoot !== 'Unknown' && (
-                    <InfoCard label="Preferred Foot" value={player.strongFoot} color="#f59e0b" />
+                  {player.preferredFoot && (
+                    <InfoCard label="Preferred Foot" value={player.preferredFoot} color="#f59e0b" />
                   )}
                   {player.age && (
                     <InfoCard label="Age" value={player.age} color="#ef4444" />
@@ -294,11 +458,11 @@ export default function FootballAI({
               </Section>
             )}
             
-            {/* Previous Clubs */}
-            {player.previousClubs && player.previousClubs.length > 0 && (
-              <Section title="Previous Clubs" icon="🏛️" animationDelay="0.5s">
+            {/* Club Career */}
+            {player.clubCareer && player.clubCareer.length > 0 && (
+              <Section title="Club Career" icon="🏛️" animationDelay="0.6s">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {player.previousClubs.map((club: string, index: number) => (
+                  {player.clubCareer.map((club: any, index: number) => (
                     <div 
                       key={index}
                       style={{
@@ -314,34 +478,7 @@ export default function FootballAI({
                       }}
                     >
                       <span>🏟️</span>
-                      {club}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-            
-            {/* Achievements */}
-            {player.achievements && player.achievements.length > 0 && (
-              <Section title="Achievements & Trophies" icon="🏆" animationDelay="0.6s">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {player.achievements.map((achievement: string, index: number) => (
-                    <div 
-                      key={index}
-                      style={{
-                        padding: '0.75rem 1.25rem',
-                        background: 'rgba(251, 191, 36, 0.1)',
-                        borderRadius: '0.75rem',
-                        border: '1px solid rgba(251, 191, 36, 0.2)',
-                        fontSize: '0.9375rem',
-                        color: '#fbbf24',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                      }}
-                    >
-                      <span>🏅</span>
-                      {achievement}
+                      <span>{club.club} ({club.period}) - {club.appearances} apps, {club.goals} goals</span>
                     </div>
                   ))}
                 </div>
@@ -354,10 +491,10 @@ export default function FootballAI({
         {team && (
           <>
             {/* Key Players */}
-            {team.keyPlayers && team.keyPlayers.length > 0 && (
-              <Section title="Key Players" icon="⭐" animationDelay="0.3s">
+            {team.currentSquad?.keyPlayers && team.currentSquad.keyPlayers.length > 0 && (
+              <Section title="Key Players" icon="⭐" animationDelay="0.4s">
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {team.keyPlayers.map((player: string | any, index: number) => (
+                  {team.currentSquad.keyPlayers.map((player: any, index: number) => (
                     <div 
                       key={index}
                       style={{
@@ -369,30 +506,7 @@ export default function FootballAI({
                         color: '#8b5cf6',
                       }}
                     >
-                      {typeof player === 'string' ? player : player.name}
-                    </div>
-                  ))}
-                </div>
-              </Section>
-            )}
-            
-            {/* Achievements */}
-            {team.achievements && team.achievements.length > 0 && (
-              <Section title="Trophies & Achievements" icon="🏆" animationDelay="0.4s">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {team.achievements.map((achievement: string, index: number) => (
-                    <div 
-                      key={index}
-                      style={{
-                        padding: '0.75rem 1.25rem',
-                        background: 'rgba(251, 191, 36, 0.1)',
-                        borderRadius: '0.75rem',
-                        border: '1px solid rgba(251, 191, 36, 0.2)',
-                        fontSize: '0.9375rem',
-                        color: '#fbbf24',
-                      }}
-                    >
-                      {achievement}
+                      {player.name} ({player.position}) - {player.nationality || player.club}
                     </div>
                   ))}
                 </div>
@@ -436,11 +550,11 @@ export default function FootballAI({
                 {team.confederation && (
                   <InfoCard label="Confederation" value={team.confederation} color="#10b981" />
                 )}
-                {team.allTimeTopScorer && (
-                  <InfoCard label="All-time Top Scorer" value={team.allTimeTopScorer} color="#ef4444" />
+                {team.records?.topScorer?.player && (
+                  <InfoCard label="Top Scorer" value={`${team.records.topScorer.player} (${team.records.topScorer.goals} goals)`} color="#ef4444" />
                 )}
-                {team.mostCaps && (
-                  <InfoCard label="Most Caps" value={team.mostCaps} color="#8b5cf6" />
+                {team.records?.mostCaps?.player && (
+                  <InfoCard label="Most Caps" value={`${team.records.mostCaps.player} (${team.records.mostCaps.caps} caps)`} color="#8b5cf6" />
                 )}
                 {team.playingStyle && (
                   <InfoCard label="Playing Style" value={team.playingStyle} color="#f59e0b" />
@@ -450,7 +564,7 @@ export default function FootballAI({
           </>
         )}
         
-        {/* WORLD CUP INFO - FIXED VERSION */}
+        {/* WORLD CUP INFO */}
         {worldCupInfo && (
           <Section 
             title={worldCupInfo.year ? `World Cup ${worldCupInfo.year}` : "World Cup"} 
@@ -461,43 +575,14 @@ export default function FootballAI({
               {worldCupInfo.host && (
                 <InfoCard label="Host" value={worldCupInfo.host} color="#4ade80" />
               )}
-              {worldCupInfo.format && (
-                <InfoCard label="Format" value={worldCupInfo.format} color="#22d3ee" />
+              {worldCupInfo.edition && (
+                <InfoCard label="Edition" value={worldCupInfo.edition} color="#22d3ee" />
               )}
               {worldCupInfo.defendingChampion && (
                 <InfoCard label="Defending Champion" value={worldCupInfo.defendingChampion} color="#fbbf24" />
               )}
               {worldCupInfo.mostTitles && (
-                <InfoCard label="Most Titles" value={worldCupInfo.mostTitles} color="#ef4444" />
-              )}
-              
-              {worldCupInfo.qualifiedTeams && worldCupInfo.qualifiedTeams.length > 0 && (
-                <div>
-                  <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
-                    Qualified Teams ({worldCupInfo.qualifiedTeams.length})
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {worldCupInfo.qualifiedTeams.slice(0, 12).map((team: string | any, index: number) => (
-                      <span 
-                        key={index}
-                        style={{
-                          padding: '0.5rem 0.75rem',
-                          background: 'rgba(59, 130, 246, 0.1)',
-                          borderRadius: '0.5rem',
-                          fontSize: '0.8125rem',
-                          color: '#93c5fd',
-                        }}
-                      >
-                        {typeof team === 'string' ? team : team.country || team.name || 'Team'}
-                      </span>
-                    ))}
-                    {worldCupInfo.qualifiedTeams.length > 12 && (
-                      <span style={{ color: '#64748b', fontSize: '0.8125rem', alignSelf: 'center' }}>
-                        +{worldCupInfo.qualifiedTeams.length - 12} more
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <InfoCard label="Most Titles" value={`${worldCupInfo.mostTitles.country} (${worldCupInfo.mostTitles.titles})`} color="#ef4444" />
               )}
             </div>
           </Section>
@@ -506,7 +591,7 @@ export default function FootballAI({
     );
   }
 
-  // Default state - no search yet
+  // Default state
   return (
     <div style={{
       display: 'flex',
@@ -534,7 +619,7 @@ export default function FootballAI({
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
       }}>
-        FutbolAI Analysis
+        FootballAI Analysis
       </h3>
       <p style={{
         color: '#94a3b8',
@@ -543,7 +628,7 @@ export default function FootballAI({
         fontSize: '1.125rem',
         marginBottom: '2rem',
       }}>
-        Search for players, teams, or tournaments to get comprehensive AI-powered football analysis, detailed statistics, and expert insights.
+        Search for players, teams, or tournaments to get comprehensive AI-powered football analysis.
       </p>
       <div style={{
         display: 'flex',
@@ -556,7 +641,6 @@ export default function FootballAI({
         <FeatureBadge icon="🏆" text="Team Analysis" color="#fbbf24" />
         <FeatureBadge icon="🌍" text="World Cup 2026" color="#3b82f6" />
         <FeatureBadge icon="📊" text="Detailed Insights" color="#22d3ee" />
-        <FeatureBadge icon="⚽" text="Live Updates" color="#ef4444" />
         <FeatureBadge icon="🤖" text="AI Powered" color="#8b5cf6" />
       </div>
     </div>
@@ -574,6 +658,24 @@ function InfoCard({ label, value, color }: { label: string; value: string; color
     }}>
       <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{label}</div>
       <div style={{ color: 'white', fontWeight: 600, fontSize: '1.125rem' }}>{value}</div>
+    </div>
+  );
+}
+
+function AchievementCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+  return (
+    <div style={{
+      padding: '1.25rem',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '0.75rem',
+      border: `1px solid ${color}30`,
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{icon}</div>
+      <div style={{ color: color, fontWeight: 700, fontSize: '2.5rem', marginBottom: '0.25rem' }}>
+        {value}
+      </div>
+      <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{label}</div>
     </div>
   );
 }

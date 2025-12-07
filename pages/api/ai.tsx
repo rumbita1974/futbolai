@@ -66,12 +66,22 @@ function getFallbackResponse(queryHint: string) {
   };
 }
 
-// Enhanced prompt with detailed information
+// Generate current date string for prompt
+function getCurrentDateContext() {
+  const now = new Date();
+  const month = now.toLocaleString('en-US', { month: 'long' });
+  const year = now.getFullYear();
+  return `${month} ${year}`;
+}
+
+// Enhanced prompt with detailed information AND STRICT FORMATTING
 async function analyzeFootballQuery(query: string) {
   console.log('🤖 Starting AI analysis for:', query);
   const groq = getGroqClient();
   
-  const prompt = `You are FutbolAI, an expert football analyst with comprehensive knowledge.
+  const currentDate = getCurrentDateContext();
+  
+  const prompt = `You are FutbolAI, an expert football analyst with comprehensive knowledge. Current date: ${currentDate}.
 
 Analyze: "${query}"
 
@@ -123,6 +133,17 @@ FOR PLAYERS:
     },
     
     "individualAwards": ["Ballon d'Or (years)", "Other awards"],
+    
+    "achievementsSummary": {
+      "worldCupTitles": 0,
+      "continentalTitles": 0,
+      "clubContinentalTitles": 0,
+      "clubDomesticTitles": {
+        "leagues": 0,
+        "cups": 0
+      }
+    },
+    
     "teamHonors": [
       {"competition": "Champions League", "wins": "Number", "years": [2022, 2018]},
       {"competition": "League Title", "wins": "Number", "years": [2023, 2022]}
@@ -136,7 +157,7 @@ FOR PLAYERS:
   },
   "teamInfo": null,
   "worldCupInfo": null,
-  "analysis": "Detailed analysis including career highlights, playing style, and current form.",
+  "analysis": "CONCISE analysis (max 150 words) focusing on key achievements, current form, and playing style.",
   "videoSearchTerm": "[Player Name] 2024 highlights goals skills recent matches",
   "confidenceScore": 0.95
 }
@@ -161,12 +182,21 @@ FOR CLUB TEAMS (like Real Madrid, Barcelona, Manchester City):
     },
     
     "currentManager": {
-      "name": "Manager name (CURRENT - October 2024)",
+      "name": "Manager name (CURRENT - ${currentDate})",
       "nationality": "Manager nationality",
       "appointed": "Date appointed"
     },
     
     "league": "Current league",
+    
+    "achievementsSummary": {
+      "continentalTitles": 0,
+      "internationalTitles": 0,
+      "domesticTitles": {
+        "leagues": 0,
+        "cups": 0
+      }
+    },
     
     "trophies": {
       "domestic": [
@@ -202,7 +232,7 @@ FOR CLUB TEAMS (like Real Madrid, Barcelona, Manchester City):
     }
   },
   "worldCupInfo": null,
-  "analysis": "Detailed analysis including history, current season performance, trophy cabinet, and key players.",
+  "analysis": "CONCISE analysis (max 150 words) focusing on trophy count, current season, and key players.",
   "videoSearchTerm": "[Team Name] 2024 highlights goals recent matches full games",
   "confidenceScore": 0.95
 }
@@ -219,12 +249,17 @@ FOR NATIONAL TEAMS (like Spain, Brazil, Argentina):
     "confederation": "UEFA/CONMEBOL/etc",
     
     "currentCoach": {
-      "name": "Coach name (CURRENT - October 2024)",
+      "name": "Coach name (CURRENT - ${currentDate})",
       "nationality": "Coach nationality",
       "appointed": "Date appointed"
     },
     
     "homeStadium": "Main home stadium",
+    
+    "achievementsSummary": {
+      "worldCupTitles": 0,
+      "continentalTitles": 0
+    },
     
     "majorHonors": [
       {"competition": "FIFA World Cup", "titles": "Number of titles", "years": [2010, ...], "icon": "🏆"},
@@ -248,7 +283,7 @@ FOR NATIONAL TEAMS (like Spain, Brazil, Argentina):
     "playingStyle": "Traditional playing style description"
   },
   "worldCupInfo": null,
-  "analysis": "Detailed analysis including history, playing style, current squad, and tournament expectations.",
+  "analysis": "CONCISE analysis (max 150 words) focusing on World Cup and continental titles, current squad strength.",
   "videoSearchTerm": "[Country Name] national team 2024 highlights matches goals",
   "confidenceScore": 0.95
 }
@@ -267,17 +302,28 @@ FOR WORLD CUP:
     "defendingChampion": "Argentina",
     "mostTitles": {"country": "Brazil", "titles": 5}
   },
-  "analysis": "Detailed analysis of the upcoming World Cup including format, favorites, and key information.",
+  "analysis": "CONCISE analysis (max 150 words) of the upcoming World Cup including format, favorites, and key information.",
   "videoSearchTerm": "World Cup 2026 highlights preview qualifiers",
   "confidenceScore": 0.95
 }
 
-IMPORTANT:
-1. Use EXACT numbers for trophies (e.g., "14" not "fourteen")
-2. For managers/coaches, use CURRENT information (October 2024)
-3. Include Copa del Rey for Spanish clubs
-4. Add trophy icons where specified
-5. Make videoSearchTerm specific and searchable
+CRITICAL INSTRUCTIONS:
+1. ALWAYS include achievementsSummary with EXACT counts:
+   - National teams: worldCupTitles, continentalTitles
+   - Clubs: continentalTitles, internationalTitles, domesticTitles.leagues, domesticTitles.cups
+   - Players: Count achievements based on teamHonors
+
+2. Use EXACT numbers (e.g., "14" not "fourteen")
+
+3. For managers/coaches, use CURRENT information (${currentDate})
+
+4. Make analysis CONCISE (max 150 words)
+
+5. VideoSearchTerm must be specific and searchable
+
+6. Calculate achievementsSummary from trophies/majorHonors/teamHonors
+
+7. Ensure data is up-to-date as of ${currentDate}
 
 Return ONLY the JSON object, no other text.`;
 
@@ -295,8 +341,35 @@ Return ONLY the JSON object, no other text.`;
     
     const parsed = safeParseJSON(content);
     
+    // Validate and ensure achievementsSummary exists
+    if (parsed.teamInfo && parsed.teamInfo.type === 'club' && !parsed.teamInfo.achievementsSummary) {
+      parsed.teamInfo.achievementsSummary = {
+        continentalTitles: 0,
+        internationalTitles: 0,
+        domesticTitles: { leagues: 0, cups: 0 }
+      };
+    }
+    
+    if (parsed.teamInfo && parsed.teamInfo.type === 'national' && !parsed.teamInfo.achievementsSummary) {
+      parsed.teamInfo.achievementsSummary = {
+        worldCupTitles: 0,
+        continentalTitles: 0
+      };
+    }
+    
+    if (parsed.playerInfo && !parsed.playerInfo.achievementsSummary) {
+      parsed.playerInfo.achievementsSummary = {
+        worldCupTitles: 0,
+        continentalTitles: 0,
+        clubContinentalTitles: 0,
+        clubDomesticTitles: { leagues: 0, cups: 0 }
+      };
+    }
+    
     // Ensure required fields
-    if (!parsed.analysis) parsed.analysis = `Comprehensive analysis of ${query}`;
+    if (!parsed.analysis) {
+      parsed.analysis = `CONCISE analysis of ${query} focusing on key achievements and current status.`;
+    }
     if (!parsed.videoSearchTerm) parsed.videoSearchTerm = `${query} football highlights 2024`;
     if (!parsed.confidenceScore) parsed.confidenceScore = 0.8;
     

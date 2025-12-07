@@ -10,6 +10,7 @@ export default function Home() {
   const [analysis, setAnalysis] = useState<string>('');
   const [teams, setTeams] = useState<any[]>([]);
   const [worldCupInfo, setWorldCupInfo] = useState<any>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
 
   const styles = {
     container: {
@@ -379,6 +380,42 @@ export default function Home() {
       background: 'linear-gradient(to right, transparent, #4ade80, transparent)',
       margin: '0.5rem 0',
     },
+    // NEW STYLES FOR TIMESTAMP
+    timestampContainer: {
+      marginTop: '1rem',
+      padding: '0.75rem',
+      background: 'rgba(0, 0, 0, 0.3)',
+      borderRadius: '0.75rem',
+      border: '1px solid rgba(74, 222, 128, 0.3)',
+      fontSize: '0.875rem',
+      color: '#94a3b8',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '0.5rem',
+    },
+    timestampIcon: {
+      color: '#4ade80',
+    },
+    timestampText: {
+      color: '#e2e8f0',
+    },
+  };
+
+  // Update the search handler callbacks
+  const handlePlayerSelect = (player: any) => {
+    setSelectedPlayer(player);
+    setLastUpdated(new Date().toLocaleString());
+  };
+
+  const handleTeamSelect = (team: any) => {
+    setSelectedTeam(team);
+    setLastUpdated(new Date().toLocaleString());
+  };
+
+  const handleWorldCupUpdate = (worldCupInfo: any) => {
+    setWorldCupInfo(worldCupInfo);
+    setLastUpdated(new Date().toLocaleString());
   };
 
   return (
@@ -418,19 +455,33 @@ export default function Home() {
           <p style={styles.subtitle}>
             AI-Powered Football Intelligence • Real-time Analysis • No Mixed Data
           </p>
+          
+          {/* Add deployment timestamp */}
+          <div style={styles.timestampContainer}>
+            <span style={styles.timestampIcon}>🔄</span>
+            <span style={styles.timestampText}>
+              Data fetched in real-time | Vercel deployment: {new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
         </header>
 
         <div style={styles.mainGrid}>
           <div style={styles.topSection}>
             <div style={styles.searchContainer} className="content-box">
               <FootballSearch
-                onPlayerSelect={setSelectedPlayer}
-                onTeamSelect={setSelectedTeam}
+                onPlayerSelect={handlePlayerSelect}
+                onTeamSelect={handleTeamSelect}
                 onVideoFound={setVideoUrl}
                 onLoadingChange={setIsLoading}
                 onAnalysisUpdate={setAnalysis}
                 onTeamsUpdate={setTeams}
-                onWorldCupUpdate={setWorldCupInfo}
+                onWorldCupUpdate={handleWorldCupUpdate}
               />
             </div>
             
@@ -443,6 +494,16 @@ export default function Home() {
                 teams={teams}
                 worldCupInfo={worldCupInfo}
               />
+              
+              {/* Show last updated timestamp */}
+              {lastUpdated && (
+                <div style={styles.timestampContainer}>
+                  <span style={styles.timestampIcon}>⏱️</span>
+                  <span style={styles.timestampText}>
+                    Last updated: {lastUpdated}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -530,4 +591,4 @@ export default function Home() {
       </div>
     </div>
   );
-}"// Vercel deployment: $(date)" 
+}

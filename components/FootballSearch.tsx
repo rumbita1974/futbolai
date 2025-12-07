@@ -52,6 +52,11 @@ export default function FootballSearch({
       
       if (data.success) {
         console.log('✅ [API] Success! Type:', data.type);
+        console.log('📊 Data received:', {
+          playerInfo: !!data.playerInfo,
+          teamInfo: !!data.teamInfo,
+          achievementsSummary: data.playerInfo?.achievementsSummary || data.teamInfo?.achievementsSummary
+        });
         
         const responseType = data.type || 'general';
         console.log('🎯 Processing as type:', responseType);
@@ -59,59 +64,145 @@ export default function FootballSearch({
         if (responseType === 'player' && data.playerInfo) {
           console.log('👤 Setting player data:', data.playerInfo.name);
           
+          // Process player achievements from achievementsSummary
+          let playerAchievements = [];
+          if (data.playerInfo.achievementsSummary) {
+            const { achievementsSummary } = data.playerInfo;
+            
+            if (achievementsSummary.worldCupTitles > 0) {
+              playerAchievements.push(`World Cup Titles: ${achievementsSummary.worldCupTitles}`);
+            }
+            if (achievementsSummary.continentalTitles > 0) {
+              playerAchievements.push(`Continental Titles: ${achievementsSummary.continentalTitles}`);
+            }
+            if (achievementsSummary.clubContinentalTitles > 0) {
+              playerAchievements.push(`Club Continental Titles: ${achievementsSummary.clubContinentalTitles}`);
+            }
+            if (achievementsSummary.clubDomesticTitles?.leagues > 0) {
+              playerAchievements.push(`Domestic Leagues: ${achievementsSummary.clubDomesticTitles.leagues}`);
+            }
+            if (achievementsSummary.clubDomesticTitles?.cups > 0) {
+              playerAchievements.push(`Domestic Cups: ${achievementsSummary.clubDomesticTitles.cups}`);
+            }
+          }
+          
+          // Add individual awards
+          if (data.playerInfo.individualAwards) {
+            playerAchievements = [...playerAchievements, ...data.playerInfo.individualAwards];
+          }
+          
+          // Add team honors
+          if (data.playerInfo.teamHonors) {
+            data.playerInfo.teamHonors.forEach((honor: any) => {
+              playerAchievements.push(`${honor.competition}: ${honor.wins} wins`);
+            });
+          }
+          
           const playerData = {
             id: Date.now(),
             name: data.playerInfo.name || query,
             fullName: data.playerInfo.fullName || data.playerInfo.name || query,
             position: data.playerInfo.position || 'Unknown',
             nationality: data.playerInfo.nationality || 'Unknown',
-            club: data.playerInfo.currentClub || data.playerInfo.club || 'Unknown',
+            club: data.playerInfo.currentClub || 'Unknown',
             age: data.playerInfo.age || null,
             
-            // Extract stats from various locations
-            goals: data.playerInfo.stats?.goals || 
-                   data.playerInfo.careerStats?.club?.totalGoals || 
+            // Extract stats from careerStats
+            goals: data.playerInfo.careerStats?.club?.totalGoals || 
                    data.playerInfo.careerStats?.totalGoals || 0,
-                   
-            assists: data.playerInfo.stats?.assists || 
-                     data.playerInfo.careerStats?.club?.totalAssists || 
+            assists: data.playerInfo.careerStats?.club?.totalAssists || 
                      data.playerInfo.careerStats?.totalAssists || 0,
-                     
-            appearances: data.playerInfo.stats?.appearances || 
-                         data.playerInfo.careerStats?.club?.totalAppearances || 
+            appearances: data.playerInfo.careerStats?.club?.totalAppearances || 
                          data.playerInfo.careerStats?.totalAppearances || 0,
-                         
+            
             marketValue: data.playerInfo.marketValue || 'Unknown',
-            achievements: data.playerInfo.achievements || 
-                         data.playerInfo.individualAwards || [],
+            
+            // Enhanced achievements structure
+            achievementsSummary: data.playerInfo.achievementsSummary || null,
+            achievements: playerAchievements,
+            individualAwards: data.playerInfo.individualAwards || [],
+            teamHonors: data.playerInfo.teamHonors || [],
             
             // Enhanced fields
             dateOfBirth: data.playerInfo.dateOfBirth || null,
             height: data.playerInfo.height || null,
             weight: data.playerInfo.weight || null,
-            preferredFoot: data.playerInfo.preferredFoot || 
-                          data.playerInfo.strongFoot || 'Unknown',
+            preferredFoot: data.playerInfo.preferredFoot || 'Unknown',
             playingStyle: data.playerInfo.playingStyle || '',
             
             // International stats
-            internationalCaps: data.playerInfo.careerStats?.international?.caps || 
-                              data.playerInfo.internationalCaps || 0,
-            internationalGoals: data.playerInfo.careerStats?.international?.goals || 
-                               data.playerInfo.internationalGoals || 0,
+            internationalCaps: data.playerInfo.careerStats?.international?.caps || 0,
+            internationalGoals: data.playerInfo.careerStats?.international?.goals || 0,
+            internationalDebut: data.playerInfo.careerStats?.international?.debut,
             
-            // Club career
-            previousClubs: data.playerInfo.previousClubs || 
-                          data.playerInfo.clubCareer?.map((c: any) => c.club) || [],
+            // Career data
+            careerStats: data.playerInfo.careerStats || null,
+            clubCareer: data.playerInfo.clubCareer || [],
+            internationalCareer: data.playerInfo.internationalCareer || null,
             
             // Current season
-            currentSeason: data.playerInfo.currentSeason || null
+            currentSeason: data.playerInfo.currentSeason || null,
+            
+            // Additional info
+            clubNumber: data.playerInfo.clubNumber,
+            positions: data.playerInfo.positions || []
           };
           
-          console.log('👤 Enhanced player data prepared');
+          console.log('👤 Enhanced player data prepared with achievementsSummary');
           onPlayerSelect(playerData);
         } 
         else if (responseType === 'team' && data.teamInfo) {
           console.log('🏟️ Setting team data:', data.teamInfo.name);
+          
+          // Process team achievements from achievementsSummary
+          let teamAchievements = [];
+          const isNationalTeam = data.teamInfo.type === 'national';
+          
+          if (data.teamInfo.achievementsSummary) {
+            const { achievementsSummary } = data.teamInfo;
+            
+            if (isNationalTeam) {
+              if (achievementsSummary.worldCupTitles > 0) {
+                teamAchievements.push(`World Cup Titles: ${achievementsSummary.worldCupTitles}`);
+              }
+              if (achievementsSummary.continentalTitles > 0) {
+                teamAchievements.push(`Continental Titles: ${achievementsSummary.continentalTitles}`);
+              }
+            } else {
+              // Club team
+              if (achievementsSummary.continentalTitles > 0) {
+                teamAchievements.push(`Continental Titles: ${achievementsSummary.continentalTitles}`);
+              }
+              if (achievementsSummary.internationalTitles > 0) {
+                teamAchievements.push(`International Titles: ${achievementsSummary.internationalTitles}`);
+              }
+              if (achievementsSummary.domesticTitles?.leagues > 0) {
+                teamAchievements.push(`Domestic Leagues: ${achievementsSummary.domesticTitles.leagues}`);
+              }
+              if (achievementsSummary.domesticTitles?.cups > 0) {
+                teamAchievements.push(`Domestic Cups: ${achievementsSummary.domesticTitles.cups}`);
+              }
+            }
+          }
+          
+          // Add trophy details
+          if (data.teamInfo.trophies) {
+            const { trophies } = data.teamInfo;
+            ['domestic', 'continental', 'worldwide'].forEach((category) => {
+              if (trophies[category]) {
+                trophies[category].forEach((trophy: any) => {
+                  teamAchievements.push(`${trophy.competition}: ${trophy.wins} wins`);
+                });
+              }
+            });
+          }
+          
+          // Add major honors for national teams
+          if (data.teamInfo.majorHonors) {
+            data.teamInfo.majorHonors.forEach((honor: any) => {
+              teamAchievements.push(`${honor.competition}: ${honor.titles} titles`);
+            });
+          }
           
           const teamData = {
             id: Date.now(),
@@ -120,58 +211,43 @@ export default function FootballSearch({
             nicknames: data.teamInfo.nicknames || [],
             
             // Ranking
-            ranking: data.teamInfo.fifaRanking || 
-                    data.teamInfo.currentRanking || 
-                    data.teamInfo.ranking || 'N/A',
+            fifaRanking: data.teamInfo.fifaRanking,
+            ranking: data.teamInfo.fifaRanking || 'N/A',
             
-            // Manager/Coach - handle multiple possible field names
+            // Manager/Coach
+            currentManager: data.teamInfo.currentManager,
+            currentCoach: data.teamInfo.currentCoach,
             coach: data.teamInfo.currentManager?.name || 
-                  data.teamInfo.managerCoach || 
-                  data.teamInfo.coach || 
                   data.teamInfo.currentCoach?.name || 'Unknown',
             
-            coachNationality: data.teamInfo.currentManager?.nationality || 
-                            data.teamInfo.currentCoach?.nationality,
-            coachAppointed: data.teamInfo.currentManager?.appointed || 
-                          data.teamInfo.currentCoach?.appointed,
-            
             // Stadium
-            stadium: data.teamInfo.stadium?.name || 
-                    data.teamInfo.stadium || 
-                    data.teamInfo.homeStadium || 'Unknown',
-            
-            stadiumCapacity: data.teamInfo.stadium?.capacity || 
-                            data.teamInfo.stadiumCapacity || 'Unknown',
-            
-            stadiumOpened: data.teamInfo.stadium?.opened,
+            stadium: data.teamInfo.stadium || null,
+            homeStadium: data.teamInfo.homeStadium,
             
             // Location
-            location: data.teamInfo.location?.city || 
-                     data.teamInfo.location || 'Unknown',
-            country: data.teamInfo.location?.country || 
-                    data.teamInfo.country || 'Unknown',
+            location: data.teamInfo.location,
             
             // Basic info
             league: data.teamInfo.league || 'Unknown',
             founded: data.teamInfo.founded || 'Unknown',
             
-            // Trophies - new detailed structure
-            trophies: data.teamInfo.trophies || 
-                     data.teamInfo.majorHonors || null,
-            
-            achievements: data.teamInfo.achievements || [],
+            // Achievements - new structured format
+            achievementsSummary: data.teamInfo.achievementsSummary || null,
+            trophies: data.teamInfo.trophies || null,
+            majorHonors: data.teamInfo.majorHonors || null,
+            achievements: teamAchievements,
             
             // Squad
+            currentSquad: data.teamInfo.currentSquad || null,
             keyPlayers: data.teamInfo.currentSquad?.keyPlayers || 
                        data.teamInfo.keyPlayers || [],
-            captain: data.teamInfo.currentSquad?.captain || 
-                    data.teamInfo.captain,
+            captain: data.teamInfo.currentSquad?.captain,
             
             // Rivalries
             mainRivalries: data.teamInfo.mainRivalries || [],
             
             // Financial
-            clubValue: data.teamInfo.clubValue || 'Unknown',
+            clubValue: data.teamInfo.clubValue,
             
             // National team specific
             fifaCode: data.teamInfo.fifaCode,
@@ -185,7 +261,7 @@ export default function FootballSearch({
             currentSeason: data.teamInfo.currentSeason || null
           };
           
-          console.log('🏟️ Enhanced team data prepared');
+          console.log('🏟️ Enhanced team data prepared with achievementsSummary');
           onTeamSelect(teamData);
         }
         else if (responseType === 'worldCup' && data.worldCupInfo) {
