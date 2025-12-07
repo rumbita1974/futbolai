@@ -1,10 +1,30 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import axios from 'axios';
 import { Groq } from 'groq-sdk';
-import NodeCache from 'node-cache';
 
-// Add caching to prevent duplicate processing
-const cache = new NodeCache({ stdTTL: 300 }); // 5 minute cache
+// Simple in-memory cache implementation (works for Vercel)
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+function getFromCache(key: string): any | null {
+  const cached = cache.get(key);
+  if (!cached) return null;
+  
+  const { data, timestamp } = cached;
+  if (Date.now() - timestamp > CACHE_DURATION) {
+    cache.delete(key);
+    return null;
+  }
+  
+  return data;
+}
+
+function setInCache(key: string, data: any): void {
+  cache.set(key, {
+    data,
+    timestamp: Date.now()
+  });
+}
 
 // Initialize Groq client
 function getGroqClient() {
@@ -132,7 +152,7 @@ videoSearchTerm: "World Cup football highlights"`;
 // YouTube search with better error handling
 async function searchYouTube(searchTerm: string) {
   const cacheKey = `youtube_${searchTerm}`;
-  const cached = cache.get(cacheKey);
+  const cached = getFromCache(cacheKey);
   if (cached) return cached as string;
 
   try {
@@ -140,7 +160,7 @@ async function searchYouTube(searchTerm: string) {
     
     if (!apiKey) {
       const fallback = getPublicYouTubeFallback(searchTerm);
-      cache.set(cacheKey, fallback);
+      setInCache(cacheKey, fallback);
       return fallback;
     }
 
@@ -160,18 +180,18 @@ async function searchYouTube(searchTerm: string) {
     if (response.data.items?.length > 0) {
       const videoId = response.data.items[0].id.videoId;
       const url = `https://www.youtube.com/embed/${videoId}`;
-      cache.set(cacheKey, url);
+      setInCache(cacheKey, url);
       return url;
     }
     
     const fallback = getPublicYouTubeFallback(searchTerm);
-    cache.set(cacheKey, fallback);
+    setInCache(cacheKey, fallback);
     return fallback;
     
   } catch (error) {
     console.error('YouTube API error:', error);
     const fallback = getPublicYouTubeFallback(searchTerm);
-    cache.set(cacheKey, fallback);
+    setInCache(cacheKey, fallback);
     return fallback;
   }
 }
@@ -224,7 +244,7 @@ export default async function handler(
     
     // Check cache first
     const cacheKey = `search_${query.toLowerCase()}`;
-    const cachedResponse = cache.get(cacheKey);
+    const cachedResponse = getFromCache(cacheKey);
     if (cachedResponse) {
       console.log('✅ Returning cached response');
       return res.status(200).json(cachedResponse);
@@ -275,7 +295,7 @@ export default async function handler(
       };
 
       // Cache the response
-      cache.set(cacheKey, response);
+      setInCache(cacheKey, response);
       
       console.log('🚀 Sending response with type:', detectedType);
       return res.status(200).json(response);
