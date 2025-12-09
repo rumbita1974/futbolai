@@ -1,339 +1,7 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
-import FootballAI from '../components/FootballAI';
+import { useState, useCallback } from 'react';
+import FootballSearch from '../components/footballsearch';
+import FootballAI from '../components/footballai';
 
-// FootballSearch component with FIXED quick search
-const FootballSearch = ({
-  onPlayerSelect,
-  onTeamSelect,
-  onVideoFound,
-  onLoadingChange,
-  onAnalysisUpdate,
-  onTeamsUpdate,
-  onWorldCupUpdate,
-}: any) => {
-  const [query, setQuery] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  
-  const searchControllerRef = useRef<AbortController | null>(null);
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const componentMounted = useRef(true);
-
-  useEffect(() => {
-    return () => {
-      componentMounted.current = false;
-      cleanupSearch();
-    };
-  }, []);
-
-  const clearAllPreviousData = useCallback(() => {
-    console.log('🧹 Clearing all previous data...');
-    onPlayerSelect(null);
-    onTeamSelect(null);
-    onWorldCupUpdate(null);
-    onTeamsUpdate([]);
-    onVideoFound('');
-    onAnalysisUpdate('');
-  }, [onPlayerSelect, onTeamSelect, onWorldCupUpdate, onTeamsUpdate, onVideoFound, onAnalysisUpdate]);
-
-  const cleanupSearch = useCallback(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    
-    if (searchControllerRef.current) {
-      searchControllerRef.current.abort();
-      searchControllerRef.current = null;
-    }
-    
-    setIsSearching(false);
-  }, []);
-
-  // FIXED: Reusable search function for both form and quick search
-  const performSearch = async (searchQuery: string) => {
-    if (!searchQuery) return;
-    
-    // Prevent concurrent searches
-    if (isSearching) {
-      console.log('⏸️ Already searching, skipping');
-      return;
-    }
-    
-    console.log('🔍 [SEARCH] Starting search for:', searchQuery);
-    setIsSearching(true);
-    onLoadingChange(true);
-    setError(null);
-    
-    // Clean up any previous search
-    cleanupSearch();
-    
-    // Create new abort controller
-    searchControllerRef.current = new AbortController();
-    
-    // Clear ALL previous selections
-    clearAllPreviousData();
-    
-    try {
-      const apiUrl = `/api/ai?action=search&query=${encodeURIComponent(searchQuery)}`;
-      console.log('🔍 [API] Calling:', apiUrl);
-      
-      const response = await fetch(apiUrl, {
-        signal: searchControllerRef.current.signal,
-        headers: { 'Accept': 'application/json' }
-      });
-      
-      console.log('🔍 [API] Response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('🔍 [API] Response received, success:', data.success);
-      
-      // Check if component is still mounted and search wasn't aborted
-      if (!componentMounted.current || searchControllerRef.current?.signal.aborted) {
-        console.log('⚠️ Search aborted or component unmounted');
-        return;
-      }
-      
-      if (data.success) {
-        console.log('✅ [API] Success! Type:', data.type);
-        
-        // Clear data again before setting new data
-        clearAllPreviousData();
-        
-        // Handle response based on type
-        const responseType = data.type;
-        
-        if (responseType === 'player' && data.playerInfo) {
-          console.log('👤 Setting player data:', data.playerInfo.name);
-          
-          const playerData = {
-            id: Date.now(),
-            name: data.playerInfo.name || searchQuery,
-            position: data.playerInfo.position || 'Unknown',
-            nationality: data.playerInfo.nationality || 'Unknown',
-            currentClub: data.playerInfo.currentClub || 'Unknown',
-            age: data.playerInfo.age || null,
-            achievementsSummary: data.playerInfo.achievementsSummary || null,
-            dateOfBirth: data.playerInfo.dateOfBirth || null,
-            height: data.playerInfo.height || null,
-            preferredFoot: data.playerInfo.preferredFoot || 'Unknown',
-            playingStyle: data.playerInfo.playingStyle || '',
-          };
-          
-          onPlayerSelect(playerData);
-        } 
-        else if ((responseType === 'club' || responseType === 'national') && data.teamInfo) {
-          console.log('🏟️ Setting team data:', data.teamInfo.name);
-          
-          const teamData = {
-            id: Date.now(),
-            name: data.teamInfo.name || searchQuery,
-            type: data.teamInfo.type || 'club',
-            fifaRanking: data.teamInfo.fifaRanking,
-            league: data.teamInfo.league || 'Unknown',
-            founded: data.teamInfo.founded || 'Unknown',
-            achievementsSummary: data.teamInfo.achievementsSummary || null,
-            stadium: data.teamInfo.stadium || null,
-          };
-          
-          onTeamSelect(teamData);
-        }
-        else if (responseType === 'worldcup' && data.worldCupInfo) {
-          console.log('🌍 Setting World Cup data');
-          
-          const worldCupData = {
-            year: data.worldCupInfo.year,
-            host: data.worldCupInfo.host,
-            defendingChampion: data.worldCupInfo.defendingChampion,
-          };
-          
-          onWorldCupUpdate(worldCupData);
-        }
-        
-        // Update analysis
-        if (data.analysis) {
-          console.log('💭 Setting analysis');
-          onAnalysisUpdate(data.analysis);
-        }
-        
-        // Update video
-        if (data.youtubeUrl) {
-          console.log('🎥 Setting video URL');
-          onVideoFound(data.youtubeUrl);
-        }
-      } else {
-        console.error('❌ API Error:', data.error);
-        setError(data.error || 'Failed to fetch data');
-        onAnalysisUpdate(`Error: ${data.error || 'Failed to fetch data'}`);
-      }
-    } catch (error: any) {
-      // Only show error if it's not an abort error
-      if (error.name !== 'AbortError' && componentMounted.current) {
-        console.error('❌ Search failed:', error);
-        setError('Search failed. Please try again.');
-        onAnalysisUpdate('Search failed. Please try again.');
-      }
-    } finally {
-      if (componentMounted.current) {
-        cleanupSearch();
-        onLoadingChange(false);
-      }
-    }
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
-  // FIXED: Quick search now works with one click
-  const handleExampleClick = (example: string) => {
-    const trimmedExample = example.trim();
-    setQuery(trimmedExample);
-    setError(null);
-    
-    // Clear any existing timeout
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    // Use immediate search with the example value
-    searchTimeoutRef.current = setTimeout(() => {
-      performSearch(trimmedExample);
-    }, 10); // Minimal delay
-  };
-
-  const quickSearches = [
-    'Messi',
-    'Cristiano Ronaldo',
-    'Real Madrid',
-    'Brazil',
-    'World Cup'
-  ];
-
-  return (
-    <div>
-      <h2 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '1.5rem', color: 'white' }}>
-        ⚽ Football AI Search
-      </h2>
-      
-      {error && (
-        <div style={{
-          padding: '1rem',
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '0.75rem',
-          marginBottom: '1.5rem',
-          color: '#ef4444',
-          fontSize: '0.875rem',
-        }}>
-          ⚠️ {error}
-        </div>
-      )}
-      
-      <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ flex: 1, position: 'relative' }}>
-          <div style={{
-            position: 'absolute',
-            left: '1rem',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: '#94a3b8',
-            fontSize: '1.25rem',
-            zIndex: 1,
-          }}>
-            🔍
-          </div>
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setError(null);
-            }}
-            placeholder="Search any player, team, or tournament..."
-            disabled={isSearching}
-            style={{
-              width: '100%',
-              padding: '0.875rem 0.875rem 0.875rem 3rem',
-              background: 'rgba(255, 255, 255, 0.1)',
-              border: error ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '0.75rem',
-              color: 'white',
-              fontSize: '1rem',
-              outline: 'none',
-              opacity: isSearching ? 0.7 : 1,
-              cursor: isSearching ? 'not-allowed' : 'text',
-            }}
-          />
-        </div>
-        <button
-          type="submit"
-          disabled={isSearching}
-          style={{
-            padding: '0.875rem 1.5rem',
-            background: isSearching 
-              ? 'linear-gradient(to right, #64748b, #475569)' 
-              : 'linear-gradient(to right, #4ade80, #22d3ee)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.75rem',
-            fontWeight: 600,
-            cursor: isSearching ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
-            fontSize: '1rem',
-            width: '100%',
-            opacity: isSearching ? 0.7 : 1,
-          }}
-        >
-          {isSearching ? 'Searching...' : 'Search with AI'}
-        </button>
-      </form>
-      
-      <div style={{ marginTop: '1.5rem' }}>
-        <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
-          Try these examples:
-        </p>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {quickSearches.map((term) => (
-            <button
-              key={term}
-              type="button"
-              onClick={() => handleExampleClick(term)}
-              disabled={isSearching}
-              style={{
-                padding: '0.5rem 1rem',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                borderRadius: '999px',
-                color: 'white',
-                fontSize: '0.875rem',
-                cursor: isSearching ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                opacity: isSearching ? 0.6 : 1,
-              }}
-            >
-              {term}
-            </button>
-          ))}
-        </div>
-      </div>
-      
-      <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#94a3b8' }}>
-        <p>AI-powered football intelligence. Get instant analysis of players, teams, and tournaments.</p>
-        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
-          Powered by Groq AI • Real-time analysis • No hardcoded data
-        </p>
-      </div>
-    </div>
-  );
-};
-
-// Main Home component - Keep your existing styling
 export default function Home() {
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
@@ -380,9 +48,6 @@ export default function Home() {
     setSelectedTeam(null);
     setLastUpdated(new Date().toLocaleString());
   }, []);
-
-  // Use your existing styles from your current index.tsx
-  // Just copy all your style objects here exactly as they are
 
   return (
     <div style={{
@@ -446,7 +111,7 @@ export default function Home() {
             display: 'inline-block',
             marginBottom: '1rem',
           }}>
-            AI-Powered Football Intelligence • Real-time Analysis
+            AI-Powered Football Intelligence • Real-time Analysis • Wikipedia Integration
           </p>
         </header>
 
@@ -518,9 +183,8 @@ export default function Home() {
               </div>
             )}
           </div>
-    performSearch(query.trim());
 
-          {/* Video Section */}
+          {/* Video Section - FIXED VERSION */}
           <div style={{
             background: 'rgba(10, 30, 10, 0.85)',
             backdropFilter: 'blur(10px)',
@@ -543,12 +207,24 @@ export default function Home() {
             }}>
               <span>📺</span>
               <span>Football Highlights</span>
+              {videoUrl && (
+                <span style={{
+                  fontSize: '0.875rem',
+                  background: 'rgba(74, 222, 128, 0.2)',
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '999px',
+                  color: '#4ade80',
+                  marginLeft: 'auto',
+                }}>
+                  🎬 Playing
+                </span>
+              )}
             </div>
             
             {isLoading ? (
               <div style={{ position: 'relative', minHeight: '150px' }}>
                 <div style={{
-                  position: 'relative' as const,
+                  position: 'relative',
                   width: '100%',
                   paddingBottom: '56.25%',
                   borderRadius: '0.75rem',
@@ -557,7 +233,7 @@ export default function Home() {
                   marginBottom: '1rem',
                 }}>
                   <div style={{
-                    position: 'absolute' as const,
+                    position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
@@ -568,7 +244,7 @@ export default function Home() {
                     justifyContent: 'center',
                     borderRadius: '0.75rem',
                     zIndex: 10,
-                    flexDirection: 'column' as const,
+                    flexDirection: 'column',
                     gap: '1rem',
                   }}>
                     <div style={{
@@ -588,27 +264,30 @@ export default function Home() {
             ) : videoUrl ? (
               <>
                 <div style={{
-                  position: 'relative' as const,
+                  position: 'relative',
                   width: '100%',
                   paddingBottom: '56.25%',
                   borderRadius: '0.75rem',
                   overflow: 'hidden',
                   background: 'rgba(0, 0, 0, 0.4)',
                   marginBottom: '1rem',
+                  border: '2px solid rgba(74, 222, 128, 0.5)',
                 }}>
                   <iframe
+                    key={videoUrl}
                     src={videoUrl}
                     title="Football Highlights"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
                     style={{
-                      position: 'absolute' as const,
+                      position: 'absolute',
                       top: 0,
                       left: 0,
                       width: '100%',
                       height: '100%',
                       border: 'none',
                     }}
+                    loading="lazy"
                   ></iframe>
                 </div>
                 <div style={{
@@ -630,7 +309,7 @@ export default function Home() {
             ) : (
               <div style={{
                 padding: '2rem 1rem',
-                textAlign: 'center' as const,
+                textAlign: 'center',
                 background: 'rgba(0, 0, 0, 0.5)',
                 borderRadius: '0.75rem',
                 border: '2px dashed rgba(74, 222, 128, 0.5)',

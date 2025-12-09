@@ -9,6 +9,233 @@ interface FootballAIProps {
   worldCupInfo?: any;
 }
 
+// Helper function to render detailed trophies
+function renderDetailedTrophies(entity: any) {
+  const isNationalTeam = entity.type === 'national';
+  const isClub = entity.type === 'club';
+  
+  if (!entity.trophies) return null;
+
+  const { trophies } = entity;
+
+  return (
+    <div style={{ marginTop: '1.5rem' }}>
+      <h4 style={{ color: 'white', fontSize: '1.125rem', marginBottom: '1rem', fontWeight: 600 }}>
+        🏆 Trophy Breakdown
+      </h4>
+      
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
+        gap: '1rem',
+      }}>
+        {isClub && (
+          <>
+            {trophies.continental && trophies.continental.length > 0 && (
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#3b82f6', fontSize: '1.25rem' }}>🌍</span>
+                  <h5 style={{ color: '#93c5fd', fontSize: '0.9375rem', fontWeight: 600 }}>Continental Titles</h5>
+                </div>
+                {trophies.continental.map((trophy: any, index: number) => (
+                  <div key={index} style={{ 
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <div style={{ color: 'white', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {trophy.competition}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                      {trophy.wins} wins • Last: {trophy.lastWin || 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {trophies.domestic?.league && trophies.domestic.league.length > 0 && (
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#22c55e', fontSize: '1.25rem' }}>🥇</span>
+                  <h5 style={{ color: '#86efac', fontSize: '0.9375rem', fontWeight: 600 }}>Domestic Leagues</h5>
+                </div>
+                {trophies.domestic.league.map((trophy: any, index: number) => (
+                  <div key={index} style={{ 
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <div style={{ color: 'white', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {trophy.competition}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                      {trophy.wins} titles • Last: {trophy.lastWin || 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {trophies.domestic?.cup && trophies.domestic.cup.length > 0 && (
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(168, 85, 247, 0.1)',
+                border: '1px solid rgba(168, 85, 247, 0.3)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#a855f7', fontSize: '1.25rem' }}>🏆</span>
+                  <h5 style={{ color: '#d8b4fe', fontSize: '0.9375rem', fontWeight: 600 }}>Domestic Cups</h5>
+                </div>
+                {trophies.domestic.cup.map((trophy: any, index: number) => (
+                  <div key={index} style={{ 
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <div style={{ color: 'white', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {trophy.competition}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                      {trophy.wins} wins • Last: {trophy.lastWin || 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+        
+        {isNationalTeam && (
+          <>
+            {trophies.worldCup && trophies.worldCup.wins > 0 && (
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#ef4444', fontSize: '1.25rem' }}>🌎</span>
+                  <h5 style={{ color: '#fca5a5', fontSize: '0.9375rem', fontWeight: 600 }}>World Cup</h5>
+                </div>
+                <div style={{ 
+                  padding: '0.75rem',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  borderRadius: '0.5rem',
+                }}>
+                  <div style={{ color: 'white', fontSize: '1rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                    {trophies.worldCup.wins} World Cup Title{trophies.worldCup.wins !== 1 ? 's' : ''}
+                  </div>
+                  <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+                    Last win: {trophies.worldCup.lastWin || 'N/A'}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {trophies.continental && trophies.continental.length > 0 && (
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '0.75rem',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <span style={{ color: '#3b82f6', fontSize: '1.25rem' }}>🏆</span>
+                  <h5 style={{ color: '#93c5fd', fontSize: '0.9375rem', fontWeight: 600 }}>Continental Titles</h5>
+                </div>
+                {trophies.continental.map((trophy: any, index: number) => (
+                  <div key={index} style={{ 
+                    marginBottom: '0.5rem',
+                    padding: '0.5rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.5rem',
+                  }}>
+                    <div style={{ color: 'white', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {trophy.competition}
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>
+                      {trophy.wins} title{trophy.wins !== 1 ? 's' : ''} • Last: {trophy.lastWin || 'N/A'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Helper Components
+function InfoCard({ label, value, color }: { label: string; value: string | number; color: string }) {
+  return (
+    <div style={{
+      padding: '1rem',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '0.75rem',
+      border: `1px solid ${color}20`,
+    }}>
+      <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{label}</div>
+      <div style={{ color: 'white', fontWeight: 600, fontSize: '1.125rem' }}>{value}</div>
+    </div>
+  );
+}
+
+function AchievementCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+  return (
+    <div style={{
+      padding: '1.25rem',
+      background: 'rgba(255, 255, 255, 0.05)',
+      borderRadius: '0.75rem',
+      border: `1px solid ${color}30`,
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{icon}</div>
+      <div style={{ color: color, fontWeight: 700, fontSize: '2.5rem', marginBottom: '0.25rem' }}>
+        {value}
+      </div>
+      <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{label}</div>
+    </div>
+  );
+}
+
+function FeatureBadge({ icon, text, color }: { icon: string; text: string; color: string }) {
+  return (
+    <div style={{
+      padding: '0.75rem 1.25rem',
+      background: `${color}15`,
+      border: `1px solid ${color}30`,
+      borderRadius: '999px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.5rem',
+      fontSize: '0.9375rem',
+      color: `${color}dd`,
+      fontWeight: 500,
+    }}>
+      <span>{icon}</span>
+      <span>{text}</span>
+    </div>
+  );
+}
+
 export default function FootballAI({ 
   player, 
   team, 
@@ -198,18 +425,21 @@ export default function FootballAI({
               }}>
                 🏆
               </div>
-              <h3 style={{ color: 'white', fontWeight: 700, fontSize: '1.5rem' }}>Achievements</h3>
+              <h3 style={{ color: 'white', fontWeight: 700, fontSize: '1.5rem' }}>Achievements Summary</h3>
             </div>
             
             {renderAchievements(entity)}
           </div>
         )}
         
+        {/* Detailed Trophies Section */}
+        {entity?.trophies && renderDetailedTrophies(entity)}
+        
         {/* Basic Info Grid */}
         {entity && (
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
             gap: '1rem',
             marginBottom: '2rem',
             animation: 'fadeIn 0.6s ease-out 0.4s both',
@@ -247,7 +477,16 @@ export default function FootballAI({
                   <InfoCard label="Founded" value={team.founded} color="#fbbf24" />
                 )}
                 {team.stadium?.name && (
-                  <InfoCard label="Stadium" value={team.stadium.name} color="#8b5cf6" />
+                  <InfoCard label="Stadium" value={`${team.stadium.name}${team.stadium.capacity ? ` (${team.stadium.capacity.toLocaleString()} capacity)` : ''}`} color="#8b5cf6" />
+                )}
+                {team.currentManager?.name && (
+                  <InfoCard label="Current Manager" value={team.currentManager.name} color="#10b981" />
+                )}
+                {team.currentCoach?.name && (
+                  <InfoCard label="Current Coach" value={team.currentCoach.name} color="#f59e0b" />
+                )}
+                {team.coach && !team.currentManager && !team.currentCoach && (
+                  <InfoCard label="Coach/Manager" value={team.coach} color="#10b981" />
                 )}
               </>
             )}
@@ -293,6 +532,15 @@ export default function FootballAI({
               )}
               {player.preferredFoot && (
                 <InfoCard label="Preferred Foot" value={player.preferredFoot} color="#f59e0b" />
+              )}
+              {player.careerStats?.club?.totalGoals !== undefined && (
+                <InfoCard label="Career Goals" value={player.careerStats.club.totalGoals} color="#ef4444" />
+              )}
+              {player.careerStats?.club?.totalAssists !== undefined && (
+                <InfoCard label="Career Assists" value={player.careerStats.club.totalAssists} color="#8b5cf6" />
+              )}
+              {player.careerStats?.club?.totalAppearances !== undefined && (
+                <InfoCard label="Career Appearances" value={player.careerStats.club.totalAppearances} color="#06b6d4" />
               )}
               {player.playingStyle && (
                 <div style={{ gridColumn: '1 / -1' }}>
@@ -347,6 +595,24 @@ export default function FootballAI({
               )}
               {worldCupInfo.defendingChampion && (
                 <InfoCard label="Defending Champion" value={worldCupInfo.defendingChampion} color="#22d3ee" />
+              )}
+              {worldCupInfo.qualifiedTeams && (
+                <InfoCard label="Qualified Teams" value={worldCupInfo.qualifiedTeams} color="#fbbf24" />
+              )}
+              {worldCupInfo.hostCities && worldCupInfo.hostCities.length > 0 && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Host Cities</div>
+                  <div style={{ 
+                    color: 'white', 
+                    fontSize: '1rem',
+                    padding: '1rem',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: '0.75rem',
+                    borderLeft: '4px solid #8b5cf6',
+                  }}>
+                    {worldCupInfo.hostCities.join(', ')}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -405,12 +671,14 @@ export default function FootballAI({
         <FeatureBadge icon="🏆" text="Team Analysis" color="#fbbf24" />
         <FeatureBadge icon="🌍" text="World Cup" color="#3b82f6" />
         <FeatureBadge icon="🤖" text="AI Powered" color="#8b5cf6" />
+        <FeatureBadge icon="📺" text="Video Highlights" color="#ef4444" />
+        <FeatureBadge icon="🏟️" text="Stadium Info" color="#10b981" />
       </div>
     </div>
   );
 }
 
-// Helper function to render achievements
+// Helper function to render achievements summary
 function renderAchievements(entity: any) {
   const { achievementsSummary } = entity;
   const isNationalTeam = entity.type === 'national';
@@ -439,6 +707,14 @@ function renderAchievements(entity: any) {
             color="#10b981"
           />
         )}
+        {achievementsSummary.olympicTitles > 0 && (
+          <AchievementCard 
+            icon="🥇" 
+            label="Olympic Titles" 
+            value={achievementsSummary.olympicTitles}
+            color="#f59e0b"
+          />
+        )}
       </div>
     );
   }
@@ -456,6 +732,14 @@ function renderAchievements(entity: any) {
             label="Continental Titles" 
             value={achievementsSummary.continentalTitles}
             color="#8b5cf6"
+          />
+        )}
+        {achievementsSummary.internationalTitles > 0 && (
+          <AchievementCard 
+            icon="🌐" 
+            label="International Titles" 
+            value={achievementsSummary.internationalTitles}
+            color="#3b82f6"
           />
         )}
         {achievementsSummary.domesticTitles?.leagues > 0 && (
@@ -509,59 +793,24 @@ function renderAchievements(entity: any) {
           color="#4ade80"
         />
       )}
-    </div>
-  );
-}
-
-// Helper Components
-function InfoCard({ label, value, color }: { label: string; value: string | number; color: string }) {
-  return (
-    <div style={{
-      padding: '1rem',
-      background: 'rgba(255, 255, 255, 0.05)',
-      borderRadius: '0.75rem',
-      border: `1px solid ${color}20`,
-    }}>
-      <div style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{label}</div>
-      <div style={{ color: 'white', fontWeight: 600, fontSize: '1.125rem' }}>{value}</div>
-    </div>
-  );
-}
-
-function AchievementCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
-  return (
-    <div style={{
-      padding: '1.25rem',
-      background: 'rgba(255, 255, 255, 0.05)',
-      borderRadius: '0.75rem',
-      border: `1px solid ${color}30`,
-      textAlign: 'center',
-    }}>
-      <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{icon}</div>
-      <div style={{ color: color, fontWeight: 700, fontSize: '2.5rem', marginBottom: '0.25rem' }}>
-        {value}
-      </div>
-      <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>{label}</div>
-    </div>
-  );
-}
-
-function FeatureBadge({ icon, text, color }: { icon: string; text: string; color: string }) {
-  return (
-    <div style={{
-      padding: '0.75rem 1.25rem',
-      background: `${color}15`,
-      border: `1px solid ${color}30`,
-      borderRadius: '999px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.5rem',
-      fontSize: '0.9375rem',
-      color: `${color}dd`,
-      fontWeight: 500,
-    }}>
-      <span>{icon}</span>
-      <span>{text}</span>
+      {achievementsSummary.individualAwards && achievementsSummary.individualAwards.length > 0 && (
+        <div style={{
+          padding: '1.25rem',
+          background: 'rgba(255, 255, 255, 0.05)',
+          borderRadius: '0.75rem',
+          border: `1px solid #f59e0b30`,
+          textAlign: 'center',
+          gridColumn: '1 / -1',
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🏅</div>
+          <div style={{ color: '#f59e0b', fontWeight: 700, fontSize: '1.5rem', marginBottom: '0.25rem' }}>
+            Individual Awards
+          </div>
+          <div style={{ color: '#94a3b8', fontSize: '0.875rem' }}>
+            {achievementsSummary.individualAwards.join(', ')}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

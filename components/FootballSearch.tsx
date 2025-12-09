@@ -96,7 +96,7 @@ export default function FootballSearch({
       const data = await response.json();
       console.log('🔍 [API] Response received, success:', data.success);
       
-      // Check if component is still mounted and this is still the current search
+      // Check if this is still the current search
       if (!searchControllerRef.current?.signal.aborted) {
         if (data.success) {
           console.log('✅ [API] Success! Type from API:', data.type);
@@ -107,26 +107,10 @@ export default function FootballSearch({
             teamType: data.teamInfo?.type
           });
           
-          // Use the type from API response, but also check the data
-          let responseType = data.type || 'general';
-          
-          // Double-check the type based on actual data
-          if (!responseType || responseType === 'general') {
-            if (data.playerInfo) {
-              responseType = 'player';
-            } else if (data.teamInfo) {
-              responseType = data.teamInfo.type === 'national' ? 'national' : 'club';
-            } else if (data.worldCupInfo) {
-              responseType = 'worldCup';
-            }
-          }
-          
-          console.log('🎯 Final processing type:', responseType);
-          
           // Clear all data again before setting new data (just to be sure)
           clearAllPreviousData();
           
-          if (responseType === 'player' && data.playerInfo) {
+          if (data.type === 'player' && data.playerInfo) {
             console.log('👤 Setting player data:', data.playerInfo.name);
             
             // Process player achievements from achievementsSummary
@@ -140,53 +124,41 @@ export default function FootballSearch({
               if (achievementsSummary.continentalTitles > 0) {
                 playerAchievements.push(`Continental Titles: ${achievementsSummary.continentalTitles}`);
               }
-              if (achievementsSummary.clubContinentalTitles > 0) {
-                playerAchievements.push(`Club Continental Titles: ${achievementsSummary.clubContinentalTitles}`);
-              }
               if (achievementsSummary.clubDomesticTitles?.leagues > 0) {
                 playerAchievements.push(`Domestic Leagues: ${achievementsSummary.clubDomesticTitles.leagues}`);
               }
               if (achievementsSummary.clubDomesticTitles?.cups > 0) {
                 playerAchievements.push(`Domestic Cups: ${achievementsSummary.clubDomesticTitles.cups}`);
               }
-            }
-            
-            // Add individual awards
-            if (data.playerInfo.individualAwards) {
-              playerAchievements = [...playerAchievements, ...data.playerInfo.individualAwards];
-            }
-            
-            // Add team honors
-            if (data.playerInfo.teamHonors) {
-              data.playerInfo.teamHonors.forEach((honor: any) => {
-                playerAchievements.push(`${honor.competition}: ${honor.wins} wins`);
-              });
+              
+              // Add individual awards if present
+              if (achievementsSummary.individualAwards && Array.isArray(achievementsSummary.individualAwards)) {
+                achievementsSummary.individualAwards.forEach((award: string) => {
+                  playerAchievements.push(award);
+                });
+              }
             }
             
             const playerData = {
               id: Date.now(),
               name: data.playerInfo.name || query,
-              fullName: data.playerInfo.fullName || data.playerInfo.name || query,
+              fullName: data.playerInfo.name || query,
               position: data.playerInfo.position || 'Unknown',
               nationality: data.playerInfo.nationality || 'Unknown',
-              club: data.playerInfo.currentClub || 'Unknown',
+              currentClub: data.playerInfo.currentClub || 'Unknown',
               age: data.playerInfo.age || null,
               
               // Extract stats from careerStats
-              goals: data.playerInfo.careerStats?.club?.totalGoals || 
-                    data.playerInfo.careerStats?.totalGoals || 0,
-              assists: data.playerInfo.careerStats?.club?.totalAssists || 
-                      data.playerInfo.careerStats?.totalAssists || 0,
-              appearances: data.playerInfo.careerStats?.club?.totalAppearances || 
-                          data.playerInfo.careerStats?.totalAppearances || 0,
+              careerStats: data.playerInfo.careerStats || null,
+              goals: data.playerInfo.careerStats?.club?.totalGoals || 0,
+              assists: data.playerInfo.careerStats?.club?.totalAssists || 0,
+              appearances: data.playerInfo.careerStats?.club?.totalAppearances || 0,
               
               marketValue: data.playerInfo.marketValue || 'Unknown',
               
-              // Enhanced achievements structure
+              // Enhanced achievements structure - use the NEW format
               achievementsSummary: data.playerInfo.achievementsSummary || null,
               achievements: playerAchievements,
-              individualAwards: data.playerInfo.individualAwards || [],
-              teamHonors: data.playerInfo.teamHonors || [],
               
               // Enhanced fields
               dateOfBirth: data.playerInfo.dateOfBirth || null,
@@ -200,29 +172,21 @@ export default function FootballSearch({
               internationalGoals: data.playerInfo.careerStats?.international?.goals || 0,
               internationalDebut: data.playerInfo.careerStats?.international?.debut,
               
-              // Career data
-              careerStats: data.playerInfo.careerStats || null,
-              clubCareer: data.playerInfo.clubCareer || [],
-              internationalCareer: data.playerInfo.internationalCareer || null,
-              
-              // Current season
-              currentSeason: data.playerInfo.currentSeason || null,
-              
-              // Additional info
-              clubNumber: data.playerInfo.clubNumber,
-              positions: data.playerInfo.positions || []
+              // Current year context
+              currentYear: data.playerInfo.currentYear || new Date().getFullYear(),
+              lastUpdated: data.playerInfo.lastUpdated || new Date().toISOString()
             };
             
             console.log('👤 Enhanced player data prepared with achievementsSummary');
             onPlayerSelect(playerData);
           } 
-          else if (responseType === 'team' && data.teamInfo) {
+          else if ((data.type === 'club' || data.type === 'national') && data.teamInfo) {
             console.log('🏟️ Setting team data:', data.teamInfo.name);
             
             // Clear player data if switching from player to team
             onPlayerSelect(null);
             
-            // Process team achievements from achievementsSummary
+            // Process team achievements from achievementsSummary - NEW FORMAT
             let teamAchievements = [];
             const isNationalTeam = data.teamInfo.type === 'national';
             
@@ -235,6 +199,9 @@ export default function FootballSearch({
                 }
                 if (achievementsSummary.continentalTitles > 0) {
                   teamAchievements.push(`Continental Titles: ${achievementsSummary.continentalTitles}`);
+                }
+                if (achievementsSummary.olympicTitles > 0) {
+                  teamAchievements.push(`Olympic Titles: ${achievementsSummary.olympicTitles}`);
                 }
               } else {
                 // Club team
@@ -253,59 +220,58 @@ export default function FootballSearch({
               }
             }
             
-            // Add trophy details
+            // Add trophy details from the NEW trophies structure
             if (data.teamInfo.trophies) {
               const { trophies } = data.teamInfo;
               
               // Continental trophies
-              if (trophies.continental) {
+              if (trophies.continental && Array.isArray(trophies.continental)) {
                 trophies.continental.forEach((trophy: any) => {
-                  teamAchievements.push(`${trophy.competition}: ${trophy.wins}`);
+                  teamAchievements.push(`${trophy.competition}: ${trophy.wins} wins (last: ${trophy.lastWin})`);
                 });
               }
               
               // International trophies
-              if (trophies.international) {
+              if (trophies.international && Array.isArray(trophies.international)) {
                 trophies.international.forEach((trophy: any) => {
-                  teamAchievements.push(`${trophy.competition}: ${trophy.wins}`);
+                  teamAchievements.push(`${trophy.competition}: ${trophy.wins} wins (last: ${trophy.lastWin})`);
                 });
               }
               
               // Domestic league trophies
-              if (trophies.domestic?.league) {
+              if (trophies.domestic?.league && Array.isArray(trophies.domestic.league)) {
                 trophies.domestic.league.forEach((trophy: any) => {
-                  teamAchievements.push(`${trophy.competition}: ${trophy.wins}`);
+                  teamAchievements.push(`${trophy.competition}: ${trophy.wins} league titles (last: ${trophy.lastWin})`);
                 });
               }
               
               // Domestic cup trophies
-              if (trophies.domestic?.cup) {
+              if (trophies.domestic?.cup && Array.isArray(trophies.domestic.cup)) {
                 trophies.domestic.cup.forEach((trophy: any) => {
-                  teamAchievements.push(`${trophy.competition}: ${trophy.wins}`);
+                  teamAchievements.push(`${trophy.competition}: ${trophy.wins} cup titles (last: ${trophy.lastWin})`);
                 });
               }
             }
             
             // Add major honors for national teams
-            if (data.teamInfo.majorHonors) {
+            if (data.teamInfo.majorHonors && Array.isArray(data.teamInfo.majorHonors)) {
               data.teamInfo.majorHonors.forEach((honor: any) => {
-                teamAchievements.push(`${honor.competition}: ${honor.titles} titles`);
+                teamAchievements.push(`${honor.competition}: ${honor.titles} titles (last: ${honor.lastWin})`);
               });
             }
             
             const teamData = {
               id: Date.now(),
-              name: data.teamInfo.name,
+              name: data.teamInfo.name || query,
               type: data.teamInfo.type || 'club',
-              nicknames: data.teamInfo.nicknames || [],
               
               // Ranking
               fifaRanking: data.teamInfo.fifaRanking,
               ranking: data.teamInfo.fifaRanking || 'N/A',
               
-              // Manager/Coach
-              currentManager: data.teamInfo.currentManager,
-              currentCoach: data.teamInfo.currentCoach,
+              // Manager/Coach - NEW STRUCTURE
+              currentManager: data.teamInfo.currentManager || null,
+              currentCoach: data.teamInfo.currentCoach || null,
               coach: data.teamInfo.currentManager?.name || 
                     data.teamInfo.currentCoach?.name || 'Unknown',
               
@@ -313,54 +279,33 @@ export default function FootballSearch({
               stadium: data.teamInfo.stadium || null,
               homeStadium: data.teamInfo.homeStadium,
               
-              // Location
-              location: data.teamInfo.location,
-              
               // Basic info
               league: data.teamInfo.league || 'Unknown',
               founded: data.teamInfo.founded || 'Unknown',
               
-              // Achievements - new structured format
+              // Achievements - NEW structured format
               achievementsSummary: data.teamInfo.achievementsSummary || null,
               trophies: data.teamInfo.trophies || null,
               majorHonors: data.teamInfo.majorHonors || null,
               achievements: teamAchievements,
               
-              // Squad
-              currentSquad: data.teamInfo.currentSquad || null,
-              keyPlayers: data.teamInfo.currentSquad?.keyPlayers || 
-                        data.teamInfo.keyPlayers || [],
-              captain: data.teamInfo.currentSquad?.captain,
-              
-              // Rivalries
-              mainRivalries: data.teamInfo.mainRivalries || [],
-              
-              // Financial
-              clubValue: data.teamInfo.clubValue,
-              
-              // National team specific
-              fifaCode: data.teamInfo.fifaCode,
-              confederation: data.teamInfo.confederation,
-              playingStyle: data.teamInfo.playingStyle,
-              
-              // Records
-              records: data.teamInfo.records || null,
-              
               // Current season
-              currentSeason: data.teamInfo.currentSeason || null
+              currentSeason: data.teamInfo.currentSeason || null,
+              
+              // Current year context
+              currentYear: data.teamInfo.currentYear || new Date().getFullYear(),
+              lastUpdated: data.teamInfo.lastUpdated || new Date().toISOString(),
+              
+              // Additional team info
+              playingStyle: data.teamInfo.playingStyle,
+              confederation: data.teamInfo.confederation,
+              fifaCode: data.teamInfo.fifaCode
             };
             
             console.log('🏟️ Enhanced team data prepared with detailed trophies');
-            console.log('📊 Trophy structure:', {
-              continental: teamData.trophies?.continental?.length || 0,
-              international: teamData.trophies?.international?.length || 0,
-              domesticLeagues: teamData.trophies?.domestic?.league?.length || 0,
-              domesticCups: teamData.trophies?.domestic?.cup?.length || 0
-            });
-            
             onTeamSelect(teamData);
           }
-          else if (responseType === 'worldCup' && data.worldCupInfo) {
+          else if (data.type === 'worldcup' && data.worldCupInfo) {
             console.log('🌍 Setting World Cup data');
             
             // Clear player and team data if switching to World Cup
@@ -376,7 +321,11 @@ export default function FootballSearch({
               venues: data.worldCupInfo.venues || [],
               defendingChampion: data.worldCupInfo.defendingChampion,
               mostTitles: data.worldCupInfo.mostTitles,
-              details: data.worldCupInfo.details
+              details: data.worldCupInfo.details,
+              
+              // Current year context
+              currentYear: data.worldCupInfo.currentYear || new Date().getFullYear(),
+              lastUpdated: data.worldCupInfo.lastUpdated || new Date().toISOString()
             };
             
             console.log('🌍 World Cup data prepared');
@@ -398,7 +347,7 @@ export default function FootballSearch({
           
           // Update video
           if (data.youtubeUrl) {
-            console.log('🎥 Setting video URL');
+            console.log('🎥 Setting video URL:', data.youtubeUrl);
             onVideoFound(data.youtubeUrl);
           }
         } else {
@@ -421,25 +370,118 @@ export default function FootballSearch({
   };
 
   const handleExampleClick = (example: string) => {
-    // Trim the example query to remove any trailing spaces
+    // Trim the example query
     const trimmedExample = example.trim();
+    
+    // Set query state immediately
     setQuery(trimmedExample);
     setError(null);
     
-    // Cancel any existing timeout
+    // Cancel any existing timeout immediately
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
     }
     
-    // Use setTimeout to ensure state is updated before search
-    searchTimeoutRef.current = setTimeout(() => {
-      const fakeEvent = { 
-        preventDefault: () => {},
-        currentTarget: { checkValidity: () => true }
-      } as unknown as React.FormEvent<Element>;
-      
-      handleSearch(fakeEvent);
-    }, 100);
+    // Abort any ongoing search
+    if (searchControllerRef.current) {
+      searchControllerRef.current.abort();
+      searchControllerRef.current = null;
+    }
+    
+    // Clear all previous data
+    clearAllPreviousData();
+    
+    // Trigger search immediately (no setTimeout delay)
+    console.log('🔍 [QUICK SEARCH] Starting search for:', trimmedExample);
+    setIsSearching(true);
+    onLoadingChange(true);
+    
+    // Create new abort controller
+    searchControllerRef.current = new AbortController();
+    
+    // Perform the search directly
+    const performQuickSearch = async () => {
+      try {
+        const apiUrl = `/api/ai?action=search&query=${encodeURIComponent(trimmedExample)}`;
+        console.log('🔍 [API] Quick search calling:', apiUrl);
+        
+        const response = await fetch(apiUrl, {
+          signal: searchControllerRef.current?.signal,
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data = await response.json();
+        
+        if (!searchControllerRef.current?.signal.aborted) {
+          if (data.success) {
+            console.log('✅ [API] Quick search success! Type:', data.type);
+            
+            // Clear all data before setting new data
+            clearAllPreviousData();
+            
+            // Handle the response (same logic as handleSearch)
+            if (data.type === 'player' && data.playerInfo) {
+              const playerData = {
+                id: Date.now(),
+                name: data.playerInfo.name || trimmedExample,
+                position: data.playerInfo.position || 'Unknown',
+                nationality: data.playerInfo.nationality || 'Unknown',
+                currentClub: data.playerInfo.currentClub || 'Unknown',
+                age: data.playerInfo.age || null,
+                achievementsSummary: data.playerInfo.achievementsSummary || null,
+                dateOfBirth: data.playerInfo.dateOfBirth || null,
+                height: data.playerInfo.height || null,
+                preferredFoot: data.playerInfo.preferredFoot || 'Unknown',
+                playingStyle: data.playerInfo.playingStyle || '',
+                careerStats: data.playerInfo.careerStats || null,
+              };
+              
+              onPlayerSelect(playerData);
+            } 
+            else if ((data.type === 'club' || data.type === 'national') && data.teamInfo) {
+              const teamData = {
+                id: Date.now(),
+                name: data.teamInfo.name || trimmedExample,
+                type: data.teamInfo.type || 'club',
+                fifaRanking: data.teamInfo.fifaRanking,
+                league: data.teamInfo.league || 'Unknown',
+                founded: data.teamInfo.founded || 'Unknown',
+                achievementsSummary: data.teamInfo.achievementsSummary || null,
+                stadium: data.teamInfo.stadium || null,
+                currentManager: data.teamInfo.currentManager || null,
+                currentCoach: data.teamInfo.currentCoach || null,
+                trophies: data.teamInfo.trophies || null,
+              };
+              
+              onTeamSelect(teamData);
+            }
+            
+            // Update analysis and video
+            if (data.analysis) onAnalysisUpdate(data.analysis);
+            if (data.youtubeUrl) onVideoFound(data.youtubeUrl);
+            
+          } else {
+            setError(data.error || 'Failed to fetch data');
+            onAnalysisUpdate(`Error: ${data.error || 'Failed to fetch data'}`);
+          }
+        }
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('❌ Quick search failed:', error);
+          setError('Search failed. Please try again.');
+          onAnalysisUpdate('Search failed. Please try again.');
+        }
+      } finally {
+        setIsSearching(false);
+        onLoadingChange(false);
+      }
+    };
+    
+    // Start the search
+    performQuickSearch();
   };
 
   // Cleanup on unmount
@@ -450,18 +492,19 @@ export default function FootballSearch({
   });
 
   const quickSearches = [
-    'Messi', 
+    'Lionel Messi', 
     'Cristiano Ronaldo',
+    'Kylian Mbappé',
     'Real Madrid', 
-    'Barcelona',
-    'Spain',
-    'Brazil',
-    'Argentina',
+    'FC Barcelona',
+    'Spain National Team',
+    'Brazil National Team',
+    'Argentina National Team',
     'World Cup 2026',
     'Manchester City',
     'Bayern Munich',
-    'Liverpool',
-    'PSG'
+    'Liverpool FC',
+    'Paris Saint-Germain'
   ];
 
   return (
@@ -551,13 +594,13 @@ export default function FootballSearch({
             }
           }}
         >
-          {isSearching ? 'Searching...' : 'Search'}
+          {isSearching ? 'Searching...' : 'Search with AI'}
         </button>
       </form>
       
       <div style={{ marginTop: '1.5rem' }}>
         <p style={{ color: '#94a3b8', fontSize: '0.875rem', marginBottom: '0.75rem' }}>
-          Quick searches:
+          Try current examples (2024):
         </p>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {quickSearches.map((term) => (
@@ -600,7 +643,7 @@ export default function FootballSearch({
       <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#94a3b8' }}>
         <p>Get detailed stats, trophy counts, current managers, and AI analysis</p>
         <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
-          Includes: Player stats • Club trophies • National team achievements • Video highlights
+          Powered by Groq AI + Wikipedia • Current 2024 data • Video highlights
         </p>
       </div>
     </div>
