@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import FootballSearch from '../components/footballsearch';
-import FootballAI from '../components/footballai';
+import FootballSearch from '../components/FootballSearch';
+import FootballAI from '../components/FootballAI';
 
 export default function Home() {
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
