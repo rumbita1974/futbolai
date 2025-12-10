@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface FootballSearchProps {
   onPlayerSelect: (player: any) => void;
@@ -21,6 +22,7 @@ export default function FootballSearch({
   onTeamsUpdate,
   onWorldCupUpdate,
 }: FootballSearchProps) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -57,11 +59,43 @@ export default function FootballSearch({
     setIsSearching(false);
   }, []);
 
+  // Handle World Cup 2026 button click
+  const handleWorldCup2026Click = () => {
+    // Navigate to the World Cup 2026 page
+    router.push('/worldcup-2026');
+  };
+
+  // Check if query is related to World Cup 2026
+  const isWorldCup2026Query = (searchQuery: string): boolean => {
+    const worldCupTerms = [
+      '2026 fifa world cup',
+      'fifa world cup 2026',
+      'world cup 2026',
+      'worldcup 2026',
+      'fifa 2026',
+      'copa mundial 2026',
+      'mundial 2026',
+      'world cup north america',
+      'world cup usa canada mexico'
+    ];
+    
+    const normalizedQuery = searchQuery.toLowerCase().trim();
+    return worldCupTerms.some(term => normalizedQuery.includes(term));
+  };
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim() || isSearching) return;
 
     console.log('🔍 [SEARCH] Starting search for:', query);
+    
+    // Check if this is a World Cup 2026 query
+    if (isWorldCup2026Query(query)) {
+      console.log('🌍 Detected World Cup 2026 query, redirecting...');
+      handleWorldCup2026Click();
+      return;
+    }
+    
     setIsSearching(true);
     onLoadingChange(true);
     setError(null);
@@ -384,6 +418,13 @@ export default function FootballSearch({
   };
 
   const handleExampleClick = (example: string) => {
+    // Check if this is a World Cup 2026 example
+    if (example.toLowerCase().includes('2026')) {
+      console.log('🌍 Quick search for World Cup 2026, redirecting...');
+      handleWorldCup2026Click();
+      return;
+    }
+    
     // Trim the example query
     const trimmedExample = example.trim();
     
@@ -515,6 +556,7 @@ export default function FootballSearch({
     'Selección Brasileña',
     'Selección Argentina',
     'Copa Mundial 2026',
+    'FIFA World Cup 2026',
     'Manchester City',
     'Bayern Munich',
     'Liverpool FC',
@@ -541,6 +583,108 @@ export default function FootballSearch({
         </div>
       )}
       
+      {/* World Cup 2026 Banner */}
+      <div style={{
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        background: 'linear-gradient(135deg, #0066b2 0%, #002244 50%, #DBA506 100%)',
+        borderRadius: '0.75rem',
+        border: '2px solid rgba(255, 255, 255, 0.3)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: '100px',
+          background: 'url("https://digitalhub.fifa.com/transform/8858ac27-b36a-4542-9505-76e3ee5d5d4d/Groups-and-match-ups-revealed-for-game-changing-FIFA-World-Cup-2026?focuspoint=0.52,0.5&io=transform:fill,width:300&quality=75")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.3,
+        }}></div>
+        
+        <div style={{ position: 'relative', zIndex: 2 }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            marginBottom: '0.75rem',
+          }}>
+            <div style={{
+              fontSize: '2rem',
+              background: 'rgba(255, 255, 255, 0.2)',
+              padding: '0.5rem',
+              borderRadius: '50%',
+            }}>
+              🏆
+            </div>
+            <div>
+              <h3 style={{
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                color: 'white',
+                marginBottom: '0.25rem',
+              }}>
+                2026 FIFA World Cup
+              </h3>
+              <p style={{
+                fontSize: '0.875rem',
+                color: 'rgba(255, 255, 255, 0.9)',
+              }}>
+                North America • June 11 - July 19, 2026
+              </p>
+            </div>
+          </div>
+          
+          <button
+            type="button"
+            onClick={handleWorldCup2026Click}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'linear-gradient(to right, #FFD700, #FFA500)',
+              color: '#002244',
+              border: 'none',
+              borderRadius: '0.5rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              fontSize: '1rem',
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 10px 25px rgba(255, 215, 0, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <span>🌍</span>
+            <span>Explore Interactive World Cup 2026</span>
+          </button>
+          
+          <div style={{
+            marginTop: '0.75rem',
+            fontSize: '0.75rem',
+            color: 'rgba(255, 255, 255, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+          }}>
+            <span>✨</span>
+            <span>Interactive fixtures • Team rosters • Venue maps • Live updates</span>
+          </div>
+        </div>
+      </div>
+      
       <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div style={{ flex: 1, position: 'relative' }}>
           <div style={{
@@ -561,7 +705,7 @@ export default function FootballSearch({
               setQuery(e.target.value);
               setError(null);
             }}
-            placeholder="Search players, teams, World Cup 2026..."
+            placeholder="Search players, teams, or type 'World Cup 2026'..."
             disabled={isSearching}
             style={{
               width: '100%',
@@ -625,10 +769,14 @@ export default function FootballSearch({
               disabled={isSearching}
               style={{
                 padding: '0.5rem 1rem',
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: term.toLowerCase().includes('2026') 
+                  ? 'rgba(255, 215, 0, 0.2)' 
+                  : 'rgba(255, 255, 255, 0.1)',
+                border: term.toLowerCase().includes('2026')
+                  ? '1px solid rgba(255, 215, 0, 0.5)'
+                  : '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '999px',
-                color: 'white',
+                color: term.toLowerCase().includes('2026') ? '#FFD700' : 'white',
                 fontSize: '0.875rem',
                 cursor: isSearching ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
@@ -637,14 +785,22 @@ export default function FootballSearch({
               }}
               onMouseEnter={(e) => {
                 if (!isSearching) {
-                  e.currentTarget.style.background = 'rgba(74, 222, 128, 0.2)';
-                  e.currentTarget.style.borderColor = '#4ade80';
+                  e.currentTarget.style.background = term.toLowerCase().includes('2026')
+                    ? 'rgba(255, 215, 0, 0.3)'
+                    : 'rgba(74, 222, 128, 0.2)';
+                  e.currentTarget.style.borderColor = term.toLowerCase().includes('2026')
+                    ? '#FFD700'
+                    : '#4ade80';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSearching) {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                  e.currentTarget.style.background = term.toLowerCase().includes('2026') 
+                    ? 'rgba(255, 215, 0, 0.2)' 
+                    : 'rgba(255, 255, 255, 0.1)';
+                  e.currentTarget.style.borderColor = term.toLowerCase().includes('2026')
+                    ? '1px solid rgba(255, 215, 0, 0.5)'
+                    : '1px solid rgba(255, 255, 255, 0.2)';
                 }
               }}
             >
